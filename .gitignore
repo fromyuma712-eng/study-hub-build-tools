@@ -1,0 +1,24 @@
+# --- 配信物・抽出データ（講義資料由来のため公開しない） ---
+public/
+evidence/
+headings.json
+coverage_manifest.json
+exceptions.json
+全科目_構成一覧.md
+除外・欠落台帳.md
+study-hub_ファイル一覧.md
+ビルド実行ログ.md
+修正計画_独立監査指摘対応.md
+AGENT_AUDIT.md
+AGENT_WORKER.md
+CHATGPT_AUDIT_REQUEST.md
+RUNBOOK.md
+DEPLOY.md
+
+# --- 生成物・キャッシュ ---
+__pycache__/
+*.pyc
+.wrangler/
+
+# --- 個人データ（科目名・資料の場所・説明文。授業と所属を特定しうるため公開しない） ---
+site_config.py
