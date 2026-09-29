@@ -28,6 +28,11 @@ MANIFEST = [
         "title": "期末対策", "desc": "自己採点式の問題集（JS で問題を生成するアプリ）。",
         "src": r"2026_春\科目C\期末対策.html", "dest": "quiz/index.html",
     },
+    # 非掲載の科目: 中身を載せず、科目があることだけを札で示す（offline。sem で節を指定）
+    {
+        "course": "科目D", "code": "DDD", "sem": "2026_秋", "offline": True,
+        "title": "非掲載", "desc": "中身をネットに載せない科目の例。",
+    },
     # フォルダごと複製するアプリ（PWA など）。sem で所属する節を明示する
     {
         "course": "道具", "code": "TL", "sem": "_juku",

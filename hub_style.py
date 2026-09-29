@@ -149,6 +149,8 @@ a.card:active{transform:scale(.985);background-color:var(--glow);transition-dura
 .dsc{font-size:14px;color:var(--faint);flex:1;margin-top:6px;line-height:1.65}
 .meta{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--faint);margin-top:12px;padding-top:9px;border-top:1px solid var(--line)}
 .miss{opacity:.6}
+.card.offline{border-style:dashed}
+.card.offline .crs{color:var(--muted)}
 
 /* ---- 行（台帳）: 名前が縦に並ぶ所。一行 46px ---- */
 .rows{border-top:1px solid var(--line)}

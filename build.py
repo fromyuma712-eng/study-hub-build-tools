@@ -133,7 +133,7 @@ def progress_figure(items, progress):
     """今学期の進み: 科目ごとに何回分まとめたか。L 字の軸、細い罫の棒、今の一点だけ燠火。"""
     rows = []
     for item, size, _m in items:
-        if item.get("url") or size is None or item["course"] not in progress:
+        if item.get("url") or item.get("offline") or size is None or item["course"] not in progress:
             continue
         done, total = progress[item["course"]]
         rows.append((item["course"], done, total))
@@ -168,6 +168,10 @@ def card(item, size, mtime):
     head = ("<span class=\"bl\"></span><span class=\"br\"></span>" + code
             + "<div class=\"crs\">" + esc(item["course"]) + "</div>"
             "<div class=\"ttl\">" + esc(item["title"]) + "</div>")
+    if size == "offline":
+        # 非掲載の科目（教員の指示などで中身をネットに置かない）。存在だけを示し、リンクも中身も持たない
+        return ("<div class=\"card offline rise\">" + head + "<div class=\"dsc\">" + esc(item["desc"]) + "</div>"
+                "<div class=\"meta\">NOT ONLINE</div></div>")
     if size == "url":
         return ("<a class=\"card rise\" href=\"" + esc(item["url"]) + "\" target=\"_blank\" "
                 "rel=\"noopener noreferrer\">" + head + "<div class=\"dsc\">" + esc(item["desc"]) + "</div>"
@@ -192,6 +196,10 @@ def build():
     for item in MANIFEST:
         sk = semester_key(item)
         courses.add(item["course"])
+        # 非掲載項目: 科目の存在だけを札で示す。原本を持たず、何も複製しない。
+        if item.get("offline"):
+            groups.setdefault(sk, []).append((item, "offline", None))
+            continue
         # 外部リンク項目: ファイル複製をせず、URLカードとして扱う。
         if item.get("url"):
             groups.setdefault(sk, []).append((item, "url", None))
