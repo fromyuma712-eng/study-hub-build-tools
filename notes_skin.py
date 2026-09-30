@@ -31,7 +31,7 @@ from siteconf import C
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 MARK = "OBSERVATORY-SKIN"
-VERSION = "5"
+VERSION = "6"   # v6(2026/9/30): .ex を .pt と同じ罫線の項目に揃えた（過去の数学・統計系の頁を今学期の見た目に統一）
 
 SANS = '"IBM Plex Sans","Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif'
 MONO = '"IBM Plex Mono",ui-monospace,"SF Mono","Hiragino Sans",monospace'
@@ -110,16 +110,15 @@ h3{font-size:14px;font-weight:500;color:var(--o-faint);letter-spacing:.04em;marg
 h3::before{content:"";display:inline-block;width:12px;height:1px;background:var(--o-ls);vertical-align:middle;margin-right:8px}
 .block,.qblock{position:relative;background:none;border:1px solid var(--o-line);border-radius:0;padding:14px 18px}
 .block::before,.qblock::before{content:"";position:absolute;inset:-3px;pointer-events:none;background:""" + CORNERS + r"""}
-.pt{background:none;border-left:1px solid var(--o-ls);padding:.45em .9em;font-size:16px;line-height:1.85}
+.pt,.ex{background:none;border:none;border-left:1px solid var(--o-ls);border-radius:0;padding:.45em .9em;font-size:16px;line-height:1.85}
 .pt b,.ex b,.timeline b,.block b{color:var(--o-paper);font-weight:600}
 .term{font-family:""" + MONO + r""";font-size:12px;letter-spacing:.06em;
   background:none;border:1px solid var(--o-line);border-radius:0;color:var(--o-muted);padding:.05em .5em}
-.ex{background:none;border:1px solid var(--o-line);border-radius:0;font-size:15px}
 .formula,.context{background:none;border-left:1px solid var(--o-ls);border-radius:0}
 .instructions{background:none;border:1px solid var(--o-line);border-radius:0}
 .note{background:none;border:1px solid var(--o-line);color:var(--o-faint);font-size:14px}
 .small{color:var(--o-faint);font-size:14px}
-.pt .small{font-size:inherit}
+.pt .small,.ex .small{font-size:inherit}
 code{font-family:""" + MONO + r""";font-size:.88em;color:var(--o-paper)}
 table{border-color:var(--o-line)}
 th{background:transparent;color:var(--o-muted);font-weight:500}
@@ -183,7 +182,7 @@ mjx-container{color:var(--o-paper)}
   .o-toc::-webkit-scrollbar{display:none}
   .o-toc a,.o-toc .o-lbl{flex:none}
   .block,.qblock{padding:10px 10px}
-  .pt{padding:.4em .7em}
+  .pt,.ex{padding:.4em .7em}
   .tgl{right:16px}
 }
 @media (prefers-reduced-motion:reduce){
