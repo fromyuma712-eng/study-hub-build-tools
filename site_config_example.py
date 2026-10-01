@@ -92,3 +92,13 @@ DYNAMIC_APPS = ["quiz/index.html"]
 # アプリが自前で明暗を覚える localStorage のキー
 APP_KINDS = {"quiz": "quiz"}
 APP_THEME_KEYS = []
+
+# ---- ダッシュボード（dashboard.py）。実際の時間割・締切は site_config.py（非公開）に書く。以下は架空の例 ----
+TERM = {"name": "2026年度 秋学期", "start": "2026-09-24", "end": "2027-01-31"}
+PERIODS = {1: "09:00", 2: "10:40", 3: "13:00", 4: "14:40", 5: "16:20"}
+TIMETABLE = [{"day": 0, "period": 2, "course": "科目A"}, {"day": 2, "period": 3, "course": "科目B"}]
+ON_DEMAND = [{"day": 0, "time": "15:00", "course": "科目C"}]
+CANCELLED = [("科目B", "2026-11-18")]
+DEADLINES = [{"at": "2026-10-08T23:59", "course": "科目A", "label": "第2回 課題"}]
+LECTURES = [("科目A", 1, "2026-09-28"), ("科目B", 1, "2026-09-30")]
+REVIEW_INTERVALS = [1, 3, 7, 14, 30]

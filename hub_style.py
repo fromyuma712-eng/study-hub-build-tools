@@ -286,7 +286,8 @@ JS = r"""
 })();
 """
 
-FACES = [("hub", "HUB", "", "科目から"), ("fields", "FIELDS", "fields/", "分野から"), ("tier", "TIER", "tier/", "評価から")]
+FACES = [("hub", "HUB", "", "科目から"), ("fields", "FIELDS", "fields/", "分野から"), ("tier", "TIER", "tier/", "評価から"),
+         ("find", "FIND", "search/", "語から")]
 
 
 def esc(s):
