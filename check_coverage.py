@@ -52,6 +52,9 @@ NOISE_PAT = re.compile(
     r'|.{0,10}第\s*[0-9]+\s*[回章]?\s*'         # 例: 「科目名 第15回」
     r'|https?://\S+'                             # URLだけの行（参考資料の一覧）(2026/9/30)
     r'|[ぁ-ん]{1,4}。)$')                        # 折り返された文の末尾「ださい。」(2026/9/30)
+# 数式だけの行（スライドの数式を文字に起こしたもの）。講義まとめは同じ式を MathJax の記法で書くため、
+# 文字の一致で照合できない。数学用英数字（U+1D400〜）・定義記号≔・所属∈・サイコロの目（U+2680〜）を含む行は見出しとしない(2026/10/2)
+FORMULA_PAT = re.compile(r'[\U0001D400-\U0001D7FF≔∈⚀-⚅]')
 
 
 def norm(s):
@@ -105,7 +108,7 @@ def pdf_headings(path):
                 continue
             if not (MIN_TITLE_LEN <= len(text) <= MAX_TITLE_LEN):
                 continue
-            if SKIP_PAT.match(text) or NOISE_PAT.match(text.strip()):
+            if SKIP_PAT.match(text) or NOISE_PAT.match(text.strip()) or FORMULA_PAT.search(text):
                 continue
             out.append(text)
             # 2026/8/23 利用者決定: `break` を外し FONT_RATIO 内の行を全採用する。
