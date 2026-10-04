@@ -197,8 +197,8 @@ JS = r"""
 """
 
 
-def _panel(pid, label, name, count_id=""):
-    c = '<span class="c" id="%s"></span>' % count_id if count_id else ""
+def _panel(pid, label, name, count_id="", link=""):
+    c = '<span class="c" id="%s"></span>' % count_id if count_id else (link or "")
     return ('<div class="panel" id="%s"><span class="bl"></span><span class="br"></span>'
             '<div class="ph"><span class="lbl">%s</span><span class="n">%s</span>%s</div>' % (pid, label, esc(name), c))
 
@@ -212,7 +212,7 @@ def dashboard_section(C, headings, manifest):
         '<style>' + CSS + '</style>'
         '<section class="dash" id="today">' + sect_head("TODAY", "今日の勉強", '<span id="dash-date"></span>')
         + '<div class="dgrid">'
-        + _panel("dash-cl", "CLASS", "今日と明日の授業") + '<div id="dash-classes"></div></div>'
+        + _panel("dash-cl", "CLASS", "今日と明日の授業", link='<a class="c" href="#timetable" style="text-decoration:none">時間割 ↓</a>') + '<div id="dash-classes"></div></div>'
         + _panel("dash-dl", "DUE", "締切（14日以内）", "dash-dl-count") + '<div id="dash-deadlines"></div></div>'
         + _panel("dash-rv", "REVIEW", "今日の復習", "dash-rv-count") + '<div id="dash-review"></div>'
         '<p class="hint">講義の日から1・3・7・14・30日後に、その回をもう一度読む。読んだら「済」を押すと次の間隔へ進む。'
@@ -224,3 +224,145 @@ def dashboard_section(C, headings, manifest):
         + '</div></section>'
         '<script type="application/json" id="dash-data">' + js_data + '</script>'
         '<script>' + JS + '</script>')
+
+
+# ---------------------------------------------------------------------------------------------
+# 時間割（週の格子）。ハブのトップ、TODAY の下に置く（2026/10/4）
+# ---------------------------------------------------------------------------------------------
+DAYS = "月火水木金土日"
+
+TT_CSS = r"""
+.tt{display:grid;grid-template-columns:5.4em repeat(5,minmax(0,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);margin-top:8px}
+.tt>*{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 10px;min-width:0}
+.tt .th{display:flex;align-items:center;gap:8px;min-height:44px;font-family:var(--mono);font-size:13px;letter-spacing:.14em;color:var(--faint)}
+.tt .th::before{content:"";width:5px;height:5px;background:var(--line-strong);flex:none}
+.tt .th.corner::before{display:none}
+.tt .th.today{color:var(--ember-text)}
+.tt .th.today::before{background:var(--ember)}
+.tt .tr{display:flex;flex-direction:column;justify-content:center;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--faint);line-height:1.5}
+.tt .tr b{font-weight:500;color:var(--ink);font-size:13px}
+.tt .tc{min-height:84px;display:flex;flex-direction:column;gap:6px}
+.tt .tc.empty{min-height:56px}
+.tt .tc.today{background:var(--glow)}
+.tt .tc.now{box-shadow:inset 3px 0 0 var(--ember)}
+.tt .tl{display:none;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--faint)}
+.tt .ti{display:block;text-decoration:none;color:inherit;transition:transform .42s var(--spring)}
+a.ti:active{transform:scale(.97);transition-duration:.07s}
+a.ti:hover .tn{text-decoration:underline;text-underline-offset:3px}
+.tt .tk{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--faint)}
+.tt .tn{display:block;font-size:15px;line-height:1.45;color:var(--ink)}
+.tt .tm{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--faint);margin-top:2px}
+.tt .tc.now .tk{color:var(--ember-text)}
+.tt .ti.off .tn{color:var(--muted)}
+.tt .ti.cx .tn{text-decoration:line-through}
+.tod{margin-top:14px}
+.tod .th2{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-height:30px}
+.tod .oi2{display:grid;grid-template-columns:5em 1fr auto;gap:10px;align-items:center;min-height:46px;padding:6px 4px;border-top:1px solid var(--line);
+  text-decoration:none;color:inherit}
+a.oi2:hover{background:var(--glow)}
+.tod .oi2 .k2{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--faint)}
+.tod .oi2 .m2{font-family:var(--mono);font-size:12px;color:var(--faint);white-space:nowrap}
+.tnote{font-size:13px;color:var(--faint);margin-top:8px;line-height:1.7}
+@media (max-width:760px){
+  .tt{grid-template-columns:1fr;border-left:none}
+  .tt>*{grid-column:auto!important;grid-row:auto!important;order:var(--o);border-left:none;border-right:none;padding:8px 4px}
+  .tt .tr,.tt .th.corner{display:none}
+  .tt .th{min-height:40px;margin-top:12px;border-bottom:1px solid var(--line-strong);font-size:14px}
+  .tt .tc{min-height:0;opacity:1}
+  .tt .tc.empty{display:none}
+  .tt .tl{display:block}
+  .tod .oi2{grid-template-columns:4em 1fr}.tod .oi2 .m2{grid-column:2}
+}
+"""
+
+TT_JS = r"""
+(function(){
+  var g=document.getElementById('timetable'); if(!g) return;
+  var now=new Date(), wd=(now.getDay()+6)%7;
+  function ymd(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+  var today=ymd(now), min=now.getHours()*60+now.getMinutes();
+  g.querySelectorAll('[data-day="'+wd+'"]').forEach(function(e){e.classList.add('today')});
+  g.querySelectorAll('.tc[data-day="'+wd+'"]').forEach(function(c){
+    var t=(c.getAttribute('data-t')||'').split(':'); if(t.length<2) return;
+    var s=(+t[0])*60+(+t[1]); if(min>=s&&min<s+90) c.classList.add('now');
+  });
+  g.querySelectorAll('.ti[data-cx]').forEach(function(i){
+    if(i.getAttribute('data-cx').split(' ').indexOf(today)>=0) i.classList.add('cx');
+  });
+})();
+"""
+
+
+def timetable_section(C, manifest, progress):
+    tt = getattr(C, "TIMETABLE", None)
+    if not tt:
+        return ""
+    periods = getattr(C, "PERIODS", {})
+    term = getattr(C, "TERM", {}) or {}
+    info = {}
+    for it in manifest:
+        info.setdefault(it["course"], it)
+    cancel = {}
+    for course, d in getattr(C, "CANCELLED", []):
+        cancel.setdefault(course, []).append(d)
+
+    def item(course, sub=""):
+        it = info.get(course)
+        code = it["code"] if it else ""
+        href = None
+        if it and not it.get("offline") and not it.get("url") and it.get("dest"):
+            href = it["dest"].replace("/index.html", "/")
+        meta = []
+        if progress.get(course):
+            meta.append("%d / %d" % progress[course])
+        if cancel.get(course):
+            meta.append("休講 " + "・".join("%d/%d" % (int(x[5:7]), int(x[8:10])) for x in sorted(cancel[course])))
+        if sub:
+            meta.insert(0, sub)
+        cls = "ti" + (" off" if it and it.get("offline") else "")
+        attrs = ' data-cx="%s"' % " ".join(sorted(cancel[course])) if cancel.get(course) else ""
+        inner = ('<span class="tk">%s</span><span class="tn">%s</span>' % (esc(code), esc(course))
+                 + ('<span class="tm">%s</span>' % esc(" ∧ ".join(meta)) if meta else ""))
+        if href:
+            return '<a class="%s" href="%s"%s>%s</a>' % (cls, esc(href), attrs, inner)
+        return '<div class="%s"%s>%s</div>' % (cls, attrs, inner)
+
+    maxp = max(t["period"] for t in tt)
+    ndays = 5
+    cells = ['<div class="th corner" style="grid-column:1;grid-row:1;--o:-1"></div>']
+    for d in range(ndays):
+        cells.append('<div class="th" data-day="%d" style="grid-column:%d;grid-row:1;--o:%d">%s<span class="d2"></span></div>'
+                     % (d, d + 2, d * 10, DAYS[d] + '<span style="letter-spacing:0">曜</span>'))
+    for p in range(1, maxp + 1):
+        cells.append('<div class="tr" style="grid-column:1;grid-row:%d;--o:-1"><b>%d限</b>%s</div>'
+                     % (p + 1, p, esc(periods.get(p, ""))))
+    for d in range(ndays):
+        for p in range(1, maxp + 1):
+            here = [t for t in tt if t["day"] == d and t["period"] == p]
+            o = d * 10 + p
+            lab = '<span class="tl">%s ∧ %d限 ∧ %s</span>' % (DAYS[d], p, esc(periods.get(p, "")))
+            body = "".join(item(t["course"]) for t in here)
+            cells.append('<div class="tc%s" data-day="%d" data-t="%s" style="grid-column:%d;grid-row:%d;--o:%d">%s%s</div>'
+                         % ("" if here else " empty", d, esc(periods.get(p, "")), d + 2, p + 1, o, lab if here else "", body))
+    od = getattr(C, "ON_DEMAND", [])
+    odh = ""
+    if od:
+        rows = "".join(
+            ('<%s class="oi2"%s><span class="k2">%s</span><span>%s</span><span class="m2">毎週%s曜 %s 配信</span></%s>'
+             % (("a" if (info.get(o["course"]) and not info[o["course"]].get("offline") and info[o["course"]].get("dest")) else "div"),
+                (' href="%s"' % esc(info[o["course"]]["dest"].replace("/index.html", "/")))
+                if (info.get(o["course"]) and not info[o["course"]].get("offline") and info[o["course"]].get("dest")) else "",
+                esc(info[o["course"]]["code"]) if info.get(o["course"]) else "",
+                esc(o["course"]), DAYS[o["day"]], esc(o["time"]),
+                ("a" if (info.get(o["course"]) and not info[o["course"]].get("offline") and info[o["course"]].get("dest")) else "div")))
+            for o in od)
+        odh = ('<div class="tod"><div class="th2"><span class="lbl">ON DEMAND</span><span class="nm" style="font-size:14px;'
+               'color:var(--muted)">遠隔（オンデマンド）</span></div>' + rows + '</div>')
+    meta = esc(term.get("name", "")) + ((" ∧ %s〜%s" % (term["start"][5:].replace("-", "/"), term["end"][5:].replace("-", "/")))
+                                        if term.get("start") and term.get("end") else "")
+    return ('<style>' + TT_CSS + '</style><section class="dash" id="timetable">'
+            + sect_head("TIMETABLE", "時間割", meta)
+            + '<div class="tt">' + "".join(cells) + '</div>' + odh
+            + '<p class="tnote">科目の名前を押すと、その科目のまとめへ入る。数字は、まとめた回／全回。'
+              '<span style="color:var(--ember-text)">■</span> は今日の曜日と、いま授業中のコマ。休講の日は、その日の欄に取り消し線が付く。</p>'
+              '</section><script>' + TT_JS + '</script>')

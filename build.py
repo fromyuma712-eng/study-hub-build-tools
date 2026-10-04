@@ -49,7 +49,7 @@ if os.name != "nt":
 
 # 面の意匠（CSS・JS・頭・頁の印）は hub_style.py にまとめてある（2026/9/27 ObservatoryLauncher の意匠へ改修）。
 from hub_style import CSS, JS, esc, sect_head, page as _face_page  # noqa: E402,F401
-from dashboard import dashboard_section  # noqa: E402
+from dashboard import dashboard_section, timetable_section  # noqa: E402
 
 
 def human(n):
@@ -275,6 +275,7 @@ def build():
     hp = os.path.join(ROOT, "headings.json")
     headings = json.load(open(hp, encoding="utf-8")) if os.path.isfile(hp) else []
     dash = dashboard_section(C, headings, MANIFEST)
+    dash += timetable_section(C, MANIFEST, progress)
 
     atomicio.write_text(os.path.join(PUBLIC, "index.html"), page(dash + "".join(parts), spec, face="hub"))
 
