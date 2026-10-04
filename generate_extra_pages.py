@@ -43,6 +43,14 @@ def build_fields_page():
 
     parts = ["<section class=\"sect\"><div class=\"body\"><p class=\"note\">科目をまたいで、各分野で何を扱ったかを一覧できる。"
              "行を押すと該当科目のページの該当箇所へ入る（本文はここに複製していない）。</p></div></section>"]
+    # 分野と科目のオイラー図（euler.py）。分野の重なりと、各分野の科目を一目で見せる
+    try:
+        sems = sorted({buildmod.semester_key(i) for i in buildmod.MANIFEST if buildmod.SEM_RE.match(buildmod.semester_key(i))},
+                      key=lambda k: (int(k[:4]), 0 if k.endswith("春") else 1), reverse=True)
+        from euler import euler_figure
+        parts.insert(0, euler_figure(C, buildmod.MANIFEST, sems[0] if sems else None, buildmod.semester_key, report=True))
+    except Exception as e:  # 図が作れなくても一覧は出す
+        print("euler: 図を作れなかった:", e)
     first = True
     for field in FIELD_ORDER:
         rows = by_field.get(field, [])
