@@ -101,6 +101,9 @@ a.li:hover{background:var(--glow)}
 .qbox button{min-height:44px;padding:0 14px;background:none;border:1px solid var(--line-strong);color:var(--ink);
   font-family:var(--mono);font-size:12px;letter-spacing:.12em;cursor:pointer;border-radius:0}
 .hint{font-size:12px;color:var(--faint);margin-top:8px;line-height:1.6}
+.more{display:block;width:100%;min-height:44px;margin-top:6px;background:none;border:1px solid var(--line);color:var(--muted);
+  font-family:var(--mono);font-size:12px;letter-spacing:.08em;cursor:pointer;border-radius:0}
+.more:hover{border-color:var(--line-strong);color:var(--ink)}
 @media (max-width:560px){.dgrid{grid-template-columns:1fr}.li{grid-template-columns:4.2em 1fr auto}}
 """
 
@@ -164,18 +167,22 @@ JS = r"""
     if(s.n>=D.intervals.length) return null;
     return {k:k,s:s,d:new Date(day0(s.last).getTime()+D.intervals[s.n]*DAY)};
   }
+  var rvOpen=false;
   function renderReview(){
     var list=[];
     D.lectures.forEach(function(l){var x=due(l); if(x&&x.d<=today) list.push({l:l,x:x})});
     list.sort(function(a,b){return a.x.d-b.x.d});
-    var rh='';
-    list.forEach(function(o){
+    var rh='', shown=0, LIM=6;
+    list.forEach(function(o,i){
+      if(!rvOpen&&i>=LIM) return; shown++;
       var late=Math.round((today-o.x.d)/DAY);
       rh+=row(md(day0(o.l.date)),o.l.course+' 第'+o.l.round+'回',(o.x.s.n+1)+'回目の復習'+(late?' ∧ '+late+'日遅れ':''),
         o.l.url,late?'soon':'','<button class="done" data-k="'+esc(o.x.k)+'" type="button">済</button>');
     });
+    if(list.length>LIM) rh+='<button class="more" id="rv-more" type="button">'+(rvOpen?'先頭の'+LIM+'回分だけにする':'残り'+(list.length-LIM)+'回分も表示')+'</button>';
     document.getElementById('dash-review').innerHTML=rh||'<div class="empty">今日の復習はない</div>';
     document.getElementById('dash-rv-count').textContent=list.length+' 回分';
+    var mb=document.getElementById('rv-more'); if(mb) mb.addEventListener('click',function(){rvOpen=!rvOpen; renderReview()});
     document.querySelectorAll('#dash-review .done').forEach(function(b){
       b.addEventListener('click',function(ev){
         ev.preventDefault(); ev.stopPropagation();
@@ -186,11 +193,27 @@ JS = r"""
   }
   renderReview();
 
+  /* 3b. 最近の講義まとめ（講義日の新しい順に8回分） */
+  var rc=D.lectures.slice().sort(function(a,b){return a.date<b.date?1:(a.date>b.date?-1:(a.course<b.course?-1:1))}).slice(0,8), rch='';
+  rc.forEach(function(l){
+    var ago=Math.round((today-day0(l.date))/DAY);
+    rch+=row(md(day0(l.date)),l.course+' 第'+l.round+'回',ago<=0?'今日':ago+'日前',l.url,ago<=2?'soon':'');
+  });
+  document.getElementById('dash-recent').innerHTML=rch||'<div class="empty">まだない</div>';
+  document.getElementById('dash-rc-count').textContent=D.lectures.length+' 回分';
+
   /* 4. 検索の入口 */
   var f=document.getElementById('dash-q');
   if(f) f.addEventListener('submit',function(ev){
     ev.preventDefault(); var q=document.getElementById('dash-qi').value.trim();
     location.href='search/'+(q?'?q='+encodeURIComponent(q):'');
+  });
+  /* 「/」で検索欄へ（入力中は何もしない） */
+  document.addEventListener('keydown',function(ev){
+    var t=ev.target&&ev.target.tagName;
+    if(ev.key==='/'&&!ev.metaKey&&!ev.ctrlKey&&!ev.altKey&&t!=='INPUT'&&t!=='TEXTAREA'&&t!=='SELECT'){
+      var i=document.getElementById('dash-qi'); if(i){ev.preventDefault(); i.focus(); i.scrollIntoView({block:'center'})}
+    }
   });
   document.getElementById('dash-date').textContent=ymd(today)+' ('+W[wd(today)]+')';
 })();
@@ -217,10 +240,11 @@ def dashboard_section(C, headings, manifest):
         + _panel("dash-rv", "REVIEW", "今日の復習", "dash-rv-count") + '<div id="dash-review"></div>'
         '<p class="hint">講義の日から1・3・7・14・30日後に、その回をもう一度読む。読んだら「済」を押すと次の間隔へ進む。'
         '記録はこの端末の中だけに残る。</p></div>'
+        + _panel("dash-rc", "RECENT", "最近の講義まとめ", "dash-rc-count") + '<div id="dash-recent"></div></div>'
         + _panel("dash-sr", "FIND", "講義まとめを横断して探す")
         + '<form class="qbox" id="dash-q" role="search"><input id="dash-qi" type="search" placeholder="語句（空白で区切ると全部を含むもの）"'
         ' aria-label="講義まとめを検索" autocomplete="off"><button type="submit">FIND</button></form>'
-        '<p class="hint">' + esc(term.get("name", "")) + 'を含む全学期の講義まとめが対象。検索はこの端末の中だけで行い、語句は外部に送らない。</p></div>'
+        '<p class="hint">' + esc(term.get("name", "")) + 'を含む全学期の講義まとめが対象。検索はこの端末の中だけで行い、語句は外部に送らない。「/」キーで検索欄へ移る。</p></div>'
         + '</div></section>'
         '<script type="application/json" id="dash-data">' + js_data + '</script>'
         '<script>' + JS + '</script>')

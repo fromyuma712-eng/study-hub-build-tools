@@ -52,9 +52,10 @@ for item in buildmod.MANIFEST:
         counter[0] += 1
         anchor = "s%d" % counter[0]
         text = strip_tags(m.group(1))
-        headings.append({"text": text, "anchor": anchor})
-        # 既にid属性があれば維持、なければ付与
-        if 'id="' in m.group(0):
+        # 既にid属性があれば維持し、その実際のidを索引へ入れる（連番を入れると、idを付け替えた頁でリンクが壊れる＝2026/10/8修正）
+        mid = re.search(r'<h2[^>]*\sid="([^"]+)"', m.group(0))
+        headings.append({"text": text, "anchor": mid.group(1) if mid else anchor})
+        if mid:
             return m.group(0)
         return '<h2 id="%s">%s</h2>' % (anchor, m.group(1))
 

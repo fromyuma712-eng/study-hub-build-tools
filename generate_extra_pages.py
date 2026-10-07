@@ -112,3 +112,5 @@ def build_tier_page():
 if __name__ == "__main__":
     build_fields_page()
     build_tier_page()
+    import security
+    security.write_security_files(PUBLIC)
