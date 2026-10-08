@@ -44,6 +44,16 @@ def pptx_text(p):
     return "\n".join(out)
 
 
+def xlsx_text(p):
+    z = zipfile.ZipFile(p)
+    out = []
+    for n in z.namelist():
+        if n == "xl/sharedStrings.xml" or re.match(r"xl/worksheets/sheet\d+\.xml$", n):
+            x = z.read(n).decode("utf8")
+            out += re.findall(r"<t[^>]*>([^<]*)</t>", x) + re.findall(r"<v>([^<]*)</v>", x)
+    return "\n".join(out)
+
+
 def source_text(folder, n):
     t = []
     for f in sorted(glob.glob(os.path.join(folder, "資料", "第%d回_*" % n))):
@@ -54,6 +64,8 @@ def source_text(folder, n):
                 t.append(pdf_text(f))
             elif f.lower().endswith(".pptx"):
                 t.append(pptx_text(f))
+            elif f.lower().endswith(".xlsx"):
+                t.append(xlsx_text(f))
         except Exception:
             pass
         ex = os.path.join(ROOT, ".extract", os.path.splitext(os.path.basename(f))[0], "text.txt")
