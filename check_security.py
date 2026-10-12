@@ -13,7 +13,7 @@ import sys
 import security
 
 PUBLIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public")
-ALLOWED_HOSTS = {"cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"}
+ALLOWED_HOSTS = set()   # 外部ホストは一切読まない（2026/10/12 自前配信へ移行）
 BAD_EXT = {".py", ".pyc", ".env", ".map", ".xlsx", ".xls", ".pdf", ".md", ".docx", ".pptx", ".key", ".pem", ".sqlite", ".db", ".log"}
 ALLOWED_TXT = {"robots.txt"}
 SECRET = [

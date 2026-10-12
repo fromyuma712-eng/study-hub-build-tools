@@ -169,7 +169,8 @@ def main():
     os.makedirs(os.path.join(PUBLIC, "search"), exist_ok=True)
     atomicio.write_text(os.path.join(PUBLIC, "search", "index.json"),
                         json.dumps(docs, ensure_ascii=False, separators=(",", ":")))
-    atomicio.write_text(os.path.join(PUBLIC, "search", "index.html"), build_page(len(docs)))
+    import selfhost
+    atomicio.write_text(os.path.join(PUBLIC, "search", "index.html"), selfhost.rewrite(build_page(len(docs))))
     size = os.path.getsize(os.path.join(PUBLIC, "search", "index.json"))
     print("search: %d 節 / 索引 %.1f MB -> public/search/" % (len(docs), size / 1e6))
 

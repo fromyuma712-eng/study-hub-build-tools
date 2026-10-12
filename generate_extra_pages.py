@@ -114,3 +114,5 @@ if __name__ == "__main__":
     build_tier_page()
     import security
     security.write_security_files(PUBLIC)
+    import selfhost
+    print("selfhost: %d 頁を自前配信へ書き換え" % selfhost.install(PUBLIC))

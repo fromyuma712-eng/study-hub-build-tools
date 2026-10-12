@@ -24,3 +24,4 @@ __pycache__/
 site_config.py
 .bin/
 .extract/
+vendor/

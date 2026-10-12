@@ -35,7 +35,11 @@ def resolve(src):
 
 def digest(path):
     with open(path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
+        raw = f.read()
+    if path.endswith(".html"):   # 配信物は外部参照を自前配信へ書き換えてあるので、原本も同じ規則で揃えてから比べる
+        import selfhost
+        raw = selfhost.rewrite(raw.decode("utf-8")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def main():
