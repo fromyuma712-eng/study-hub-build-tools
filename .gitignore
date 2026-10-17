@@ -25,3 +25,5 @@ site_config.py
 .bin/
 .extract/
 vendor/
+notices.json
+NOTICES_PLAN.md

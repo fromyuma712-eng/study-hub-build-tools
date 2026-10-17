@@ -31,7 +31,8 @@ from siteconf import C
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 MARK = "OBSERVATORY-SKIN"
-VERSION = "6"   # v6(2026/9/30): .ex を .pt と同じ罫線の項目に揃えた（過去の数学・統計系の頁を今学期の見た目に統一）
+VERSION = "7"   # v7(2026/10/17): 授業からのお知らせ（.o-notice）と TIPS の意匠を追加
+# v6(2026/9/30): .ex を .pt と同じ罫線の項目に揃えた（過去の数学・統計系の頁を今学期の見た目に統一）
 
 SANS = '"IBM Plex Sans","Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif'
 MONO = '"IBM Plex Mono",ui-monospace,"SF Mono","Hiragino Sans",monospace'
@@ -278,6 +279,23 @@ td.amount{font-family:""" + MONO + r"""}
 }
 """
 
+
+# 授業からのお知らせ（apply_notices.py が各回の末尾に差し込む）と TIPS（2026/10/17）
+NOTICE_CSS = r"""
+.o-notice{position:relative;margin:18px 0 4px;padding:12px 16px 10px;border:1px solid var(--o-line);border-left:2px solid var(--o-ls)}
+.o-notice .o-nh{font-family:""" + MONO + r""";font-size:11px;letter-spacing:.14em;color:var(--o-faint);margin:0 0 6px}
+.o-notice .o-nh b{font-family:""" + SANS + r""";font-size:13px;letter-spacing:.02em;color:var(--o-paper);font-weight:500;margin-left:8px}
+.o-nl{display:grid;grid-template-columns:5.6em 1fr;gap:4px 14px;margin:0}
+.o-nl dt{font-size:13px;color:var(--o-muted);padding-top:.25em}
+.o-nl dd{margin:0;font-size:15px;line-height:1.75}
+.o-nl dd p{margin:0 0 3px}
+.o-tips{margin-top:10px;padding-top:8px;border-top:1px dashed var(--o-line)}
+.o-tips ul{margin:0;padding-left:1.1em}
+.o-tips li{font-size:14.5px;line-height:1.75;color:var(--o-muted);margin:2px 0}
+.o-nsrc,.o-nempty{font-size:12.5px;color:var(--o-faint);margin:8px 0 0}
+@media (max-width:560px){.o-nl{grid-template-columns:1fr}.o-nl dt{padding-top:.4em}}
+"""
+
 KIND_CSS = {"notes": NOTES_CSS, "quiz": QUIZ_CSS, "workbook": WORKBOOK_CSS, "sheet": SHEET_CSS}
 KIND_BY_DEST = C.APP_KINDS
 
@@ -361,7 +379,7 @@ APP_TAIL_JS = r"""
 
 def head_block(kind):
     js = NOTES_HEAD_JS if kind == "notes" else APP_HEAD_JS
-    return ("<!-- " + MARK + ":HEAD v" + VERSION + " -->" + FONTS + "<style>" + BASE_CSS + KIND_CSS[kind]
+    return ("<!-- " + MARK + ":HEAD v" + VERSION + " -->" + FONTS + "<style>" + BASE_CSS + NOTICE_CSS + KIND_CSS[kind]
             + "</style><script>" + js + "</script><!-- /" + MARK + ":HEAD -->")
 
 

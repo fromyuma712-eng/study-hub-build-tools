@@ -16,6 +16,7 @@
 - 計画→実行→振り返りを支え、表現を単純に揃え、プライバシーを守る（学習分析ダッシュボードの設計指針）
 """
 import json
+import os
 import re
 
 from hub_style import esc, sect_head
@@ -65,7 +66,28 @@ def data(C, headings, manifest):
         "lectures": [{"course": c, "round": r, "date": d, "url": link(c, r)}
                      for c, r, d in getattr(C, "LECTURES", [])],
         "intervals": list(getattr(C, "REVIEW_INTERVALS", [1, 3, 7, 14, 30])),
+        "notices": _notices(C, link),
     }
+
+
+def _notices(C, link):
+    """各科目の、講義日のある最新回のお知らせ（notices.json。apply_notices.py と同じ正本）。"""
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "notices.json")
+    if not os.path.isfile(p):
+        return []
+    courses = json.load(open(p, encoding="utf-8")).get("courses", {})
+    held = {}
+    for c, r, d in getattr(C, "LECTURES", []):
+        if str(r) in courses.get(c, {}) and (c not in held or r > held[c][0]):
+            held[c] = (r, d)
+    out = []
+    for c, (r, d) in held.items():
+        n = courses[c][str(r)]
+        if not (n.get("next") or n.get("quiz") or n.get("tasks")):
+            continue
+        out.append({"course": c, "round": r, "date": d, "url": link(c, r),
+                    "next": n.get("next"), "quiz": n.get("quiz"), "tasks": n.get("tasks") or []})
+    return sorted(out, key=lambda x: x["date"], reverse=True)
 
 
 CSS = r"""
@@ -85,6 +107,11 @@ a.li:hover{background:var(--glow)}
 .li .t{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.04em}
 .li .s{font-size:12px;color:var(--faint)}
 .li.soon .t{color:var(--ember-text)}
+.li.nt{align-items:start;padding:8px 0}
+.li .nb{display:flex;flex-direction:column;gap:2px}
+.li .nb b{font-weight:500;font-size:15px}
+.li .nb .s{font-size:13px;line-height:1.6;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.li .nb .s.q{color:var(--ember-text)}
 .li.past{opacity:.55}
 .li .x{font-family:var(--mono);font-size:12px;color:var(--faint);white-space:nowrap}
 .empty{font-size:14px;color:var(--faint);padding:8px 0}
@@ -159,6 +186,26 @@ JS = r"""
   document.getElementById('dash-deadlines').innerHTML=dh||'<div class="empty">14日以内の締切はない</div>';
   document.getElementById('dash-dl-count').textContent=DL.filter(function(o){return o.d>=now}).length+' 件';
   if(DL.some(function(o){return o.d>=now&&o.d-now<3*DAY})) document.getElementById('dash-dl').classList.add('hot');
+
+  /* 2b. 授業からのお知らせ（各科目の最新回の、次回・小テスト・課題）。小テストのある科目を先に、5科目まで */
+  var NT=(D.notices||[]).slice().sort(function(a,b){return (b.quiz?1:0)-(a.quiz?1:0)||(a.date<b.date?1:-1)}), ntOpen=false;
+  function renderNotices(){
+    var nh='', LIM=5;
+    NT.forEach(function(o,i){
+      if(!ntOpen&&i>=LIM) return;
+      var lines='';
+      if(o.quiz) lines+='<span class="s q">小テスト：'+esc(o.quiz)+'</span>';
+      if(o.next) lines+='<span class="s">次回：'+esc(o.next)+'</span>';
+      o.tasks.forEach(function(t){ lines+='<span class="s">課題：'+esc(t)+'</span>' });
+      nh+='<a class="li nt'+(o.quiz?' soon':'')+'" href="'+(o.url||'#')+'"><span class="t">'+md(day0(o.date))+'</span>'
+        +'<span class="nb"><b>'+esc(o.course)+' 第'+o.round+'回</b>'+lines+'</span><span></span></a>';
+    });
+    if(NT.length>LIM) nh+='<button class="more" id="nt-more" type="button">'+(ntOpen?'先頭の'+LIM+'科目だけにする':'残り'+(NT.length-LIM)+'科目も表示')+'</button>';
+    document.getElementById('dash-notices').innerHTML=nh||'<div class="empty">お知らせはない</div>';
+    var mb=document.getElementById('nt-more'); if(mb) mb.addEventListener('click',function(){ntOpen=!ntOpen; renderNotices()});
+  }
+  renderNotices();
+  document.getElementById('dash-nt-count').textContent=NT.length+' 科目';
 
   /* 3. 今日の復習（講義日から 1・3・7・14・30 日。復習するたびに次の間隔へ） */
   var RK='studyhub_review_v1', st={}; try{st=JSON.parse(get(RK)||'{}')}catch(e){st={}}
@@ -237,6 +284,8 @@ def dashboard_section(C, headings, manifest):
         + '<div class="dgrid">'
         + _panel("dash-cl", "CLASS", "今日と明日の授業", link='<a class="c" href="#timetable" style="text-decoration:none">時間割 ↓</a>') + '<div id="dash-classes"></div></div>'
         + _panel("dash-dl", "DUE", "締切（14日以内）", "dash-dl-count") + '<div id="dash-deadlines"></div></div>'
+        + _panel("dash-nt", "NOTICE", "授業からのお知らせ", "dash-nt-count") + '<div id="dash-notices"></div>'
+        '<p class="hint">各科目の最新回で述べられた次回・小テスト・課題（小テストのある科目が先）。全文と Claude の TIPS は各回の末尾にある。</p></div>'
         + _panel("dash-rv", "REVIEW", "今日の復習", "dash-rv-count") + '<div id="dash-review"></div>'
         '<p class="hint">講義の日から1・3・7・14・30日後に、その回をもう一度読む。読んだら「済」を押すと次の間隔へ進む。'
         '記録はこの端末の中だけに残る。</p></div>'
