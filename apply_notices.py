@@ -9,8 +9,8 @@
 
 notices.json の形:
   {"courses": {"<科目>": {"<回>": {"next": 文字列|null, "quiz": 文字列|null,
-                                  "tasks": [文字列], "tips": [文字列], "source": 文字列}}}}
-TIPS は講義資料外の、Claude による助言である（ページにもその旨を出す）。演習・課題の答えは書かない。
+                                  "tasks": [文字列], "tips": [文字列], "impression": 文字列, "source": 文字列}}}}
+TIPS と感想（impression）は講義資料外の、Claude による助言・所感である（ページにもその旨を出す）。演習・課題の答えは書かない。
 """
 import html
 import json
@@ -63,8 +63,11 @@ def render(rnd, n):
     if n.get("tips"):
         out.append('<div class="o-tips"><div class="o-nh">TIPS <b>Claude の突っ込み</b></div><ul>'
                    + "".join("<li>%s</li>" % esc(t) for t in n["tips"]) + "</ul></div>")
+    if n.get("impression"):
+        out.append('<div class="o-imp"><div class="o-nh">IMPRESSION <b>Claude の感想</b></div><p>'
+                   + esc(n["impression"]) + "</p></div>")
     src = ("出典：" + esc(n["source"]) + "。") if n.get("source") else ""
-    out.append('<p class="o-nsrc">' + src + "TIPS は講義資料外の、Claude による助言である。</p>")
+    out.append('<p class="o-nsrc">' + src + "TIPS と感想は講義資料外の、Claude による助言・所感である。</p>")
     out.append("</aside>")
     return "".join(out)
 

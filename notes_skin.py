@@ -31,7 +31,8 @@ from siteconf import C
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 MARK = "OBSERVATORY-SKIN"
-VERSION = "7"   # v7(2026/10/17): 授業からのお知らせ（.o-notice）と TIPS の意匠を追加
+VERSION = "8"   # v8(2026/10/17): お知らせに Claude の感想（.o-imp）を追加
+# v7(2026/10/17): 授業からのお知らせ（.o-notice）と TIPS の意匠を追加
 # v6(2026/9/30): .ex を .pt と同じ罫線の項目に揃えた（過去の数学・統計系の頁を今学期の見た目に統一）
 
 SANS = '"IBM Plex Sans","Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif'
@@ -292,6 +293,8 @@ NOTICE_CSS = r"""
 .o-tips{margin-top:10px;padding-top:8px;border-top:1px dashed var(--o-line)}
 .o-tips ul{margin:0;padding-left:1.1em}
 .o-tips li{font-size:14.5px;line-height:1.75;color:var(--o-muted);margin:2px 0}
+.o-imp{margin-top:10px;padding-top:8px;border-top:1px dashed var(--o-line)}
+.o-imp p{margin:0;font-size:14.5px;line-height:1.8;color:var(--o-muted)}
 .o-nsrc,.o-nempty{font-size:12.5px;color:var(--o-faint);margin:8px 0 0}
 @media (max-width:560px){.o-nl{grid-template-columns:1fr}.o-nl dt{padding-top:.4em}}
 """
