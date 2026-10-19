@@ -294,7 +294,8 @@ def dashboard_section(C, headings, manifest):
         + '<form class="qbox" id="dash-q" role="search"><input id="dash-qi" type="search" placeholder="語句（空白で区切ると全部を含むもの）"'
         ' aria-label="講義まとめを検索" autocomplete="off"><button type="submit">FIND</button></form>'
         '<p class="hint">' + esc(term.get("name", "")) + 'を含む全学期の講義まとめが対象。検索はこの端末の中だけで行い、語句は外部に送らない。「/」キーで検索欄へ移る。</p></div>'
-        + '</div></section>'
+        + '</div><p class="hint" style="margin-top:10px"><a href="zemi/">専門演習（ゼミ）を比べる →</a>'
+        '　2027年度の配属先を、分野・自動検出タグ・全文検索で絞り込み、並べて比較する（申込 11/10〜11/12）。</p></section>'
         '<script type="application/json" id="dash-data">' + js_data + '</script>'
         '<script>' + JS + '</script>')
 

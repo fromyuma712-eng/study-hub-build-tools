@@ -27,3 +27,6 @@ site_config.py
 vendor/
 notices.json
 NOTICES_PLAN.md
+zemi.json
+ZEMI_PLAN.md
+security_exempt.json

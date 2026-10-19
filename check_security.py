@@ -6,6 +6,7 @@
   4. 配布してはならない種類のファイルがない（.py・.env・.map・.xlsx・.pdf・.md・.docx・秘密の設定）
     python -X utf8 check_security.py
 """
+import json
 import os
 import re
 import sys
@@ -24,6 +25,10 @@ SECRET = [
     (re.compile(r"/Users/[a-z]+/|C:\\Users\\|GoogleDrive-|CloudDocs"), "端末の絶対パス"),
     (re.compile(r"(?:Wi-?Fi|WiFi|ＷｉＦｉ|SSID)[^<。]{0,40}パスワード\s*(?:は|：|:)\s*[A-Za-z0-9!-/:-@]{6,}"), "Wi-Fi の実パスワード"),
 ]
+# 例外（頁・種類・値の組で厳密に限定）。中身は git 管理外の security_exempt.json に置く（理由と日付を必ず書く）。
+_EX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "security_exempt.json")
+EXEMPT = {tuple(x[:3]) for x in json.load(open(_EX, encoding="utf-8"))["exempt"]} if os.path.isfile(_EX) else set()
+
 EXT_URL = re.compile(r"""(?:<script[^>]+src=["']|<link[^>]+href=["']|@import\s+(?:url\()?["']?|url\(["']?)(https?:)?//([a-zA-Z0-9.-]+)""")
 
 
@@ -57,6 +62,8 @@ def main():
                         fails.append("許可していない外部ホストを読み込む: %s → %s" % (rel, host))
             for rx, label in SECRET:
                 for m in rx.finditer(s):
+                    if (rel.replace(os.sep, "/"), label, m.group(0)) in EXEMPT:
+                        continue
                     fails.append("%s: %s「%s」" % (rel, label, m.group(0)[:50]))
     seen = set()
     for f in fails:

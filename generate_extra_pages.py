@@ -112,6 +112,8 @@ def build_tier_page():
 if __name__ == "__main__":
     build_fields_page()
     build_tier_page()
+    import zemi_build
+    zemi_build.build()   # 専門演習の比較頁（zemi.json があるときだけ）
     import security
     security.write_security_files(PUBLIC)
     import selfhost
