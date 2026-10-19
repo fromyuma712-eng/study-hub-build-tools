@@ -10,6 +10,7 @@
 import glob
 import json
 import os
+import re
 import shutil
 
 import fitz
@@ -79,6 +80,26 @@ mark{background:rgba(228,87,46,.28);color:inherit}
 .front p{white-space:pre-wrap;font-size:14.5px;line-height:1.85}
 .sched img{max-width:100%;border:1px solid var(--line);background:#fff;margin:8px 0}
 .empty{color:var(--faint);font-size:14px;padding:12px 0}
+.ses{border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;font-size:13.5px;line-height:1.7}
+.ses h4{font-size:12px;font-weight:500;color:var(--faint);margin:0 0 2px}
+.ses .r{display:grid;grid-template-columns:7.2em 1fr;gap:2px 8px}
+.ses .r.past{opacity:.45}
+.ses .r.next b{color:var(--ember-text)}
+.ses .d{font-family:var(--mono);font-size:12.5px}
+.ses .more{font-size:12.5px;color:var(--faint)}
+.ses a,.day a{color:var(--ink)}
+.dayctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0}
+.dayctl label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;min-height:36px}
+.day{margin:14px 0}
+.day h3{font-family:var(--mono);font-size:14px;font-weight:500;margin:0 0 4px;padding-bottom:4px;border-bottom:1px solid var(--line-strong)}
+.day h3 .warn{font-family:var(--sans);font-size:12px;color:var(--ember-text);margin-left:10px}
+.day .row{display:grid;grid-template-columns:8.6em 1fr auto;gap:4px 12px;padding:6px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.day .row .tm{font-family:var(--mono);font-size:13px}
+.day .row .tm small{display:block;font-family:var(--sans);font-size:11.5px;color:var(--faint)}
+.day .row .pl{font-family:var(--mono);font-size:13px;color:var(--muted);text-align:right}
+.day.past{opacity:.5}
+.notes{font-size:13px;color:var(--muted);line-height:1.8;margin:6px 0 10px}
+@media (max-width:560px){.day .row{grid-template-columns:6.6em 1fr}.day .row .pl{grid-column:2;text-align:left}}
 .src{font-size:12.5px;color:var(--faint);margin-top:18px;line-height:1.8}
 @media (max-width:560px){.grid{grid-template-columns:1fr}.cmp td{min-width:220px}}
 """
@@ -113,6 +134,24 @@ function visible(){
   return L;
 }
 function secHTML(t){return t.sections.map(function(s){return '<div class="sec"><h4>'+esc((s.no?s.no+'．':'')+s.title)+'</h4><p>'+hl(s.text)+'</p></div>'}).join('')+(t.note?'<p class="hint">'+esc(t.note)+'</p>':'')}
+var TODAY=(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)})();
+function md(ds){var a=ds.split('-');return (+a[1])+'/'+(+a[2])}
+function tm(x){return x.start?(x.start+(x.label==='昼休み'&&x.mode==='対面'?'頃':'')+(x.end?'–'+x.end:'〜')):''}
+function sesLine(x){return '<span class="d">'+md(x.date)+'（'+x.dow+'）</span><span><b>'+tm(x)+'</b>'+(x.label?' '+esc(x.label):'')
+  +(x.mode==='対面'?' ＠'+esc(x.place||''):' リアルタイム配信'+(x.url?' <a href="'+esc(x.url)+'" target="_blank" rel="noopener">接続</a>':'')+(x.place?'（学内視聴は'+esc(x.place)+'）':''))+'</span>'}
+function sesHTML(t){
+  var S=(D.sessions||[]).filter(function(x){return x.p===t.page}), up=S.filter(function(x){return x.date>=TODAY}), past=S.length-up.length;
+  var h='<div class="ses"><h4>個別説明会</h4>';
+  if(!S.length&&!D.ondemand[t.page]) h+='<div class="more">対面・リアルタイム配信の予定なし</div>';
+  var show=open[t.page]?S:up.slice(0,4);
+  show.forEach(function(x,i){h+='<div class="r'+(x.date<TODAY?' past':'')+(x===up[0]?' next':'')+'">'+sesLine(x)+'</div>'});
+  if(!open[t.page]&&up.length>4) h+='<div class="more">ほか '+(up.length-4)+' 回（「全文」で全部表示）</div>';
+  if(!open[t.page]&&past) h+='<div class="more">終わった回 '+past+' 回</div>';
+  if(D.ondemand[t.page]) h+='<div class="r"><span class="d">配信</span><span>オンデマンド配信 '+esc(D.ondemand[t.page])+(D.lms?'（資料は'+esc(D.lms)+'）':'')+'</span></div>';
+  if(open[t.page]&&D.realtime&&D.realtime[t.page]) h+='<div class="r"><span class="d">注記</span><span>'+esc(D.realtime[t.page]).replace(/\n/g,'<br>')+'</span></div>';
+  if(D.other[t.page]) h+='<div class="r"><span class="d">その他</span><span>'+esc(D.other[t.page])+'</span></div>';
+  return h+'</div>';
+}
 function card(t){
   var w=wish.indexOf(t.page), c=cmp.indexOf(t.page)>=0;
   return '<article class="card" id="z'+t.page+'"><div class="top"><span class="nm">'+hl(t.name)+'</span>'+(t.reading?'<span class="rd">'+esc(t.reading)+'</span>':'')
@@ -122,7 +161,7 @@ function card(t){
    +'<div class="act"><button class="btn" data-a="open" data-p="'+t.page+'">'+(open[t.page]?'閉じる':'全文')+'</button>'
    +'<button class="btn'+(c?' on':'')+'" data-a="cmp" data-p="'+t.page+'">'+(c?'比較から外す':'比べる')+'</button>'
    +'<button class="btn'+(w>=0?' on':'')+'" data-a="wish" data-p="'+t.page+'">'+(w>=0?'第'+(w+1)+'希望 ✓':'希望に入れる')+'</button></div>'
-   +(open[t.page]?'<div class="full">'+secHTML(t)+'</div>':'')+'</article>';
+   +sesHTML(t)+(open[t.page]?'<div class="full">'+secHTML(t)+'</div>':'')+'</article>';
 }
 function byPage(p){return T.filter(function(t){return t.page===p})[0]}
 function renderList(){
@@ -146,13 +185,26 @@ function renderWish(){
    +'<span><button class="btn" data-a="up" data-p="'+p+'">↑</button> <button class="btn" data-a="down" data-p="'+p+'">↓</button> <button class="btn" data-a="wish" data-p="'+p+'">外す</button></span></li>'}).join('')+'</ol>'
    +'<p><button class="btn" data-a="copy">希望順を文字でコピー</button> <span class="hint" id="copied"></span></p>'+(wish.length<5?'<p class="hint">第5希望まではすべて必須。あと'+(5-wish.length)+'つ選ぶ。</p>':'');
 }
+var onlyWish=false, showPast=false;
+function renderSched(){
+  var S=(D.sessions||[]).filter(function(x){var t=byPage(x.p);return t&&fields[t.field]&&(!onlyWish||wish.indexOf(x.p)>=0)&&(showPast||x.date>=TODAY)});
+  var days={},order=[];S.forEach(function(x){if(!days[x.date]){days[x.date]=[];order.push(x.date)}days[x.date].push(x)});
+  var h='';
+  order.forEach(function(ds){var L=days[ds];h+='<section class="day'+(ds<TODAY?' past':'')+'"><h3>'+md(ds)+'（'+L[0].dow+'）'+(ds===TODAY?' 今日':'')
+    +(D.dayNotes[ds]?'<span class="warn">'+esc(D.dayNotes[ds])+'</span>':'')+'</h3>';
+    L.forEach(function(x){var t=byPage(x.p);h+='<div class="row"><span class="tm">'+tm(x)+(x.label?'<small>'+esc(x.label)+'</small>':'')+'</span>'
+      +'<span><a href="#z'+x.p+'" data-a="goto" data-p="'+x.p+'">'+esc(t.name)+'</a> <span class="fld '+FK[t.field]+'">'+esc(t.field)+'</span>'+(wish.indexOf(x.p)>=0?' <span class="rd">第'+(wish.indexOf(x.p)+1)+'希望</span>':'')+'</span>'
+      +'<span class="pl">'+(x.mode==='対面'?'＠'+esc(x.place||''):'配信'+(x.url?' <a href="'+esc(x.url)+'" target="_blank" rel="noopener">接続</a>':'')+(x.place?'<br><small>学内視聴 '+esc(x.place)+'</small>':''))+'</span></div>'});
+    h+='</section>'});
+  document.getElementById('dayview').innerHTML=h||'<div class="empty">条件に合う回はない。</div>';
+}
 function renderBar(){
   document.getElementById('cmpn').textContent=cmp.length;
   document.getElementById('wishn').textContent=wish.length;
 }
 function render(){
   ['list','cmp','wish','sched','front'].forEach(function(k){document.getElementById('v-'+k).style.display=(tab===k?'':'none');document.getElementById('t-'+k).className=(tab===k?'on':'')});
-  if(tab==='list')renderList(); if(tab==='cmp')renderCmp(); if(tab==='wish')renderWish(); renderBar();
+  if(tab==='list')renderList(); if(tab==='cmp')renderCmp(); if(tab==='wish')renderWish(); if(tab==='sched')renderSched(); renderBar();
 }
 document.addEventListener('click',function(e){
   var b=e.target.closest('[data-a]'); if(!b)return; var a=b.getAttribute('data-a'), p=+b.getAttribute('data-p');
@@ -171,6 +223,8 @@ document.addEventListener('click',function(e){
 });
 document.getElementById('q').addEventListener('input',function(e){q=e.target.value.trim();renderList()});
 document.getElementById('sort').addEventListener('change',function(e){sort=e.target.value;renderList()});
+document.getElementById('ow').addEventListener('change',function(e){onlyWish=e.target.checked;renderSched()});
+document.getElementById('sp').addEventListener('change',function(e){showPast=e.target.checked;renderSched()});
 render();
 })();
 """
@@ -198,6 +252,40 @@ def tagrules():
         ["大学院進学", "大学院"],
         ["Slack", "Slack"],
     ]
+
+
+def schedule_data(sc):
+    """一覧表の取り込み結果を、表示用の回（session）の列に直す。1つのセルに複数の時限があれば別の回にする。"""
+    import datetime
+    if not sc:
+        return {"sessions": [], "ondemand": {}, "other": {}, "schedNotes": [], "lms": None, "dayNotes": {}}
+    W = "月火水木金土日"
+    dow = lambda ds: W[datetime.date.fromisoformat(ds).weekday()]
+    ses = []
+    for x in sc["inperson"]:
+        for sl in x["slots"]:
+            ses.append({"p": x["page"], "date": x["date"], "dow": x["dow"] or dow(x["date"]), "start": sl["start"],
+                        "end": sl["end"], "label": sl["label"], "place": x["place"], "mode": "対面", "raw": x["raw"]})
+    for x in sc["online"]:
+        for sl in x.get("sessions", []):
+            ses.append({"p": x["page"], "date": sl["date"], "dow": dow(sl["date"]), "start": sl["start"], "end": sl["end"],
+                        "label": "", "place": sl.get("room"), "mode": "リアルタイム配信", "url": sl["url"], "raw": x["realtime"]})
+    ses.sort(key=lambda z: (z["date"], (z["start"] or "99:99").zfill(5), z["p"] or 0))
+    ond = {str(x["page"]): x["ondemand"] for x in sc["online"] if x["ondemand"] and x["ondemand"] != "なし" and x["page"]}
+    rt = {str(x["page"]): x["realtime"] for x in sc["online"] if x["realtime"].strip() not in ("", "なし") and x["page"]}
+    oth = {str(x["page"]): x["text"] for x in sc["other"] if x["page"]}
+    notes = []
+    for n in sc["notes"]:
+        if n["page"] not in (1, 4):
+            continue
+        for x in n["lines"]:   # 「・」で始まらない行は、前の「・」の行の折り返し
+            if notes and notes[-1].startswith("・") and not x.startswith(("・", "〔", "●", "（", "(")) and n["page"] == 4:
+                notes[-1] += x
+            else:
+                notes.append(x)
+    lms = next((m.group(1) for x in notes for m in [re.search(r"資料は、?(.+?)に掲載", x)] if m), None)
+    dayn = {k: "".join(v) for k, v in sc.get("daynotes", {}).items()}
+    return {"sessions": ses, "ondemand": ond, "realtime": rt, "other": oth, "schedNotes": notes, "lms": lms, "dayNotes": dayn}
 
 
 def sched_images(pdf, out_dir):
@@ -233,6 +321,7 @@ def build():
                          "reading": t.get("reading"), "field": t["field"], "theme_index": t["theme_index"],
                          "theme": th, "sections": secs, "note": t.get("note")})
     data = {"teachers": teachers, "tagrules": tagrules(), "front": d.get("front", {})}
+    data.update(schedule_data(d.get("schedule")))
     counts = {f: sum(1 for t in teachers if t["field"] == f) for f in ("データサイエンス", "ビジネス・データサイエンス", "ビジネス")}
     front = "".join('<section class="front"><h3>履修要項 p.%s</h3><p>%s</p></section>' % (esc(k), esc(v))
                     for k, v in sorted(d.get("front", {}).items(), key=lambda x: int(x[0])))
@@ -263,8 +352,13 @@ def build():
         '<div class="grid" id="grid"></div></div>'
         '<div id="v-cmp" class="cmp"><div id="cmpview"></div></div>'
         '<div id="v-wish" class="wish"><div id="wishview"></div></div>'
-        '<div id="v-sched" class="sched"><p class="hint">個別説明会一覧表（2026/10/19時点）の頁をそのまま載せる。変更がありうるので、当日に LMS の最新版を確かめること。</p>'
-        + "".join('<img src="%s" alt="個別説明会一覧表 %d頁目" loading="lazy">' % (fn, i + 1) for i, fn in enumerate(imgs)) + '</div>'
+        '<div id="v-sched" class="sched">'
+        '<div class="notes">' + "<br>".join(esc(x) for x in data.get("schedNotes", []) if x.startswith("・")) + '</div>'
+        '<p class="hint">時限は大学の標準時程で時刻に直した（1限9:00・2限10:40・3限13:00・4限14:40・5限16:20、各90分。昼休みは一覧表の注記どおり12:20頃から）。分野の絞り込みは「一覧」の選択と共通。</p>'
+        '<div class="dayctl"><label><input type="checkbox" id="ow"> 希望リストのゼミだけ</label><label><input type="checkbox" id="sp"> 終わった日も表示</label></div>'
+        '<div id="dayview"></div>'
+        '<details><summary class="hint">原本（個別説明会一覧表・2026/10/19時点）の頁を見る</summary>'
+        + "".join('<img src="%s" alt="個別説明会一覧表 %d頁目" loading="lazy">' % (fn, i + 1) for i, fn in enumerate(imgs)) + '</details></div>'
         '<div id="v-front">' + (front or '<p class="empty">前書き（p.1〜3）は書き起こし中。</p>') + '</div>'
         '<div class="cmpbar"><button class="btn" data-a="tab" data-t="cmp">並べて比較へ</button><button class="btn" data-a="tab" data-t="wish">希望リストへ</button>'
         '<button class="btn" data-a="tab" data-t="list">一覧へ</button></div>'
