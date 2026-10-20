@@ -28,5 +28,6 @@ vendor/
 notices.json
 NOTICES_PLAN.md
 zemi.json
+zemi_info.json
 ZEMI_PLAN.md
 security_exempt.json

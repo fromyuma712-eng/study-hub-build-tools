@@ -80,6 +80,14 @@ mark{background:rgba(228,87,46,.28);color:inherit}
 .front p{white-space:pre-wrap;font-size:14.5px;line-height:1.85}
 .sched img{max-width:100%;border:1px solid var(--line);background:#fff;margin:8px 0}
 .empty{color:var(--faint);font-size:14px;padding:12px 0}
+.kw{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 2px}
+.kwb{font:inherit;font-size:12px;line-height:1.4;padding:2px 8px;min-height:26px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer}
+.kwb:hover{border-color:var(--line-strong);color:var(--ink)}
+.info dl{display:grid;grid-template-columns:6.5em 1fr;gap:4px 10px;margin:4px 0;font-size:13.5px;line-height:1.7}
+.info dt{color:var(--faint)}.info dd{margin:0}.info ul{margin:0;padding-left:1.1em}
+.info a.src{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:4px;white-space:nowrap}
+.info a{color:var(--ink);word-break:break-all}
+@media (max-width:560px){.info dl{grid-template-columns:1fr}.info dt{margin-top:4px}}
 .ses{border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;font-size:13.5px;line-height:1.7}
 .ses h4{font-size:12px;font-weight:500;color:var(--faint);margin:0 0 2px}
 .ses .r{display:grid;grid-template-columns:7.2em 1fr;gap:2px 8px}
@@ -152,16 +160,34 @@ function sesHTML(t){
   if(D.other[t.page]) h+='<div class="r"><span class="d">その他</span><span>'+esc(D.other[t.page])+'</span></div>';
   return h+'</div>';
 }
+function kwHTML(t){var k=(D.info.keywords||{})[t.page]||[];return k.length?'<div class="kw">'+k.map(function(x){return '<button class="kwb" data-a="kw" data-k="'+esc(x)+'">'+esc(x)+'</button>'}).join('')+'</div>':''}
+function srcA(o){if(!o||!o.src)return '';var h=o.src.replace(/^https?:\/\//,'').split('/')[0];return ' <a class="src" href="'+esc(o.src)+'" target="_blank" rel="noopener">'+esc(h)+'</a>'}
+function infoHTML(t){
+  var p=(D.info.profiles||{})[t.page]; if(!p) return '';
+  var r=[];
+  function row(k,v){if(v)r.push('<dt>'+k+'</dt><dd>'+v+'</dd>')}
+  if(p.position) row('職位',esc(p.position.value)+srcA(p.position));
+  if(p.fields&&p.fields.value&&p.fields.value.length) row('専門',esc(p.fields.value.join('・'))+srcA(p.fields));
+  if(p.degree) row('学位',esc(p.degree.value)+srcA(p.degree));
+  function lst(L){var one=L.every(function(c){return c.src===L[0].src});return '<ul>'+L.map(function(c){return '<li>'+esc(c.value)+(one?'':srcA(c))+'</li>'}).join('')+'</ul>'+(one?'<div>出典'+srcA(L[0])+'</div>':'')}
+  if(p.career&&p.career.length) row('経歴',lst(p.career));
+  if(p.lab_url) row('研究室','<a href="'+esc(p.lab_url.value)+'" target="_blank" rel="noopener">'+esc(p.lab_url.value)+'</a>');
+  if(p.notes&&p.notes.length) row('補足',lst(p.notes));
+  if(p.material_links&&p.material_links.length) row('資料中のリンク','<ul>'+p.material_links.map(function(m){return '<li><a href="'+esc(m.url)+'" target="_blank" rel="noopener">'+esc(m.url)+'</a><br>'+esc(m.summary||(m.ok?'':'（開けなかった）'))+'</li>'}).join('')+'</ul>');
+  if(!r.length) return '<div class="sec info"><h4>資料と公開情報</h4><p class="hint">大学の教員紹介・researchmap・KAKEN では、この担任者の情報を確かめられなかった（'+esc(p.accessed||'')+' 時点）。</p></div>';
+  return '<div class="sec info"><h4>資料と公開情報</h4><dl>'+r.join('')+'</dl><p class="hint">大学・researchmap・研究室など公式の公開情報から、'+esc(p.accessed||'')+' に取得した職業上の情報のみ。右の灰色の語は出典。最新の情報は出典で確かめること。</p></div>';
+}
 function card(t){
   var w=wish.indexOf(t.page), c=cmp.indexOf(t.page)>=0;
   return '<article class="card" id="z'+t.page+'"><div class="top"><span class="nm">'+hl(t.name)+'</span>'+(t.reading?'<span class="rd">'+esc(t.reading)+'</span>':'')
    +'<span class="fld '+FK[t.field]+'">'+esc(t.field)+'</span><span class="rd">p.'+t.page+'</span></div>'
    +'<div class="th">'+hl(t.theme)+'</div>'
    +'<div class="tg">'+t._tags.map(function(x){return '<span>'+esc(x)+'</span>'}).join('')+'</div>'
+   +kwHTML(t)
    +'<div class="act"><button class="btn" data-a="open" data-p="'+t.page+'">'+(open[t.page]?'閉じる':'全文')+'</button>'
    +'<button class="btn'+(c?' on':'')+'" data-a="cmp" data-p="'+t.page+'">'+(c?'比較から外す':'比べる')+'</button>'
    +'<button class="btn'+(w>=0?' on':'')+'" data-a="wish" data-p="'+t.page+'">'+(w>=0?'第'+(w+1)+'希望 ✓':'希望に入れる')+'</button></div>'
-   +sesHTML(t)+(open[t.page]?'<div class="full">'+secHTML(t)+'</div>':'')+'</article>';
+   +sesHTML(t)+(open[t.page]?'<div class="full">'+secHTML(t)+infoHTML(t)+'</div>':'')+'</article>';
 }
 function byPage(p){return T.filter(function(t){return t.page===p})[0]}
 function renderList(){
@@ -214,6 +240,7 @@ document.addEventListener('click',function(e){
   else if(a==='up'||a==='down'){var k=wish.indexOf(p),n=a==='up'?k-1:k+1;if(n<0||n>=wish.length)return;wish[k]=wish[n];wish[n]=p;put(WK,wish)}
   else if(a==='goto'){e.preventDefault();tab='list';open[p]=true;render();var el=document.getElementById('z'+p);if(el)el.scrollIntoView({block:'start'});return}
   else if(a==='copy'){var txt=wish.map(function(p,i){var t=byPage(p);return '第'+(i+1)+'希望：'+t.name+'（'+t.field+'）'}).join('\n');try{navigator.clipboard.writeText(txt);document.getElementById('copied').textContent='コピーした'}catch(x){}return}
+  else if(a==='kw'){q=b.getAttribute('data-k');document.getElementById('q').value=q;tab='list'}
   else if(a==='tab'){tab=b.getAttribute('data-t')}
   else if(a==='field'){var f=b.getAttribute('data-f');fields[f]=!fields[f];b.classList.toggle('on',fields[f])}
   else if(a==='preset'){var v=b.getAttribute('data-v');Object.keys(fields).forEach(function(k){fields[k]=v==='all'||(v==='data'&&k!=='ビジネス')||(v==='biz'&&k!=='データサイエンス')});document.querySelectorAll('[data-a=field]').forEach(function(c){c.classList.toggle('on',!!fields[c.getAttribute('data-f')])})}
@@ -325,6 +352,8 @@ def build():
                          "reading": t.get("reading"), "field": t["field"], "theme_index": t["theme_index"],
                          "theme": th, "sections": secs, "note": t.get("note")})
     data = {"teachers": teachers, "tagrules": tagrules(), "front": d.get("front", {})}
+    ip = os.path.join(ROOT, "zemi_info.json")   # キーワードと公開情報（git 管理外。ZEMI_PLAN 第4段）
+    data["info"] = json.load(open(ip, encoding="utf-8")) if os.path.isfile(ip) else {"keywords": {}, "profiles": {}}
     data.update(schedule_data(d.get("schedule")))
     counts = {f: sum(1 for t in teachers if t["field"] == f) for f in ("データサイエンス", "ビジネス・データサイエンス", "ビジネス")}
     front = "".join('<section class="front"><h3>履修要項 p.%s</h3><p>%s</p></section>' % (esc(k), esc(v))
