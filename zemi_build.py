@@ -364,6 +364,7 @@ def build():
         '<div class="dates"><span>個別説明会 <b>10/20〜11/9</b></span><span class="hot">事前確認（お試し）フォーム <b>10/31 17:00</b>まで</span>'
         '<span class="hot">申込 <b>11/10 9:00〜11/12 17:00</b>（17時締切）</span><span>結果発表 <b>12/22</b></span>'
         '<span>希望：第1〜5は必須・第6〜15は任意</span></div>'
+        '<p class="hint">学部の1期生のため、どのゼミも2027年度が初めての開講である（先輩・卒業生はいない）。雰囲気や時間外の負担は説明会で直接確かめる。</p>'
         '<nav class="tabs">'
         '<button id="t-list" data-a="tab" data-t="list">一覧</button>'
         '<button id="t-cmp" data-a="tab" data-t="cmp">並べて比較（<span id="cmpn">0</span>）</button>'
