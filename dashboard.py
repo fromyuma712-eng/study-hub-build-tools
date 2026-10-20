@@ -67,6 +67,7 @@ def data(C, headings, manifest):
                      for c, r, d in getattr(C, "LECTURES", [])],
         "intervals": list(getattr(C, "REVIEW_INTERVALS", [1, 3, 7, 14, 30])),
         "notices": _notices(C, link),
+        "zemi": _zemi(),
     }
 
 
@@ -88,6 +89,20 @@ def _notices(C, link):
         out.append({"course": c, "round": r, "date": d, "url": link(c, r),
                     "next": n.get("next"), "quiz": n.get("quiz"), "tasks": n.get("tasks") or []})
     return sorted(out, key=lambda x: x["date"], reverse=True)
+
+
+def _zemi():
+    """専門演習の個別説明会（zemi.json の schedule。zemi_build と同じ正本）。無ければ空。"""
+    root = os.path.dirname(os.path.abspath(__file__))
+    if not os.path.isfile(os.path.join(root, "zemi.json")):
+        return None
+    import zemi_build
+    d = json.load(open(os.path.join(root, "zemi.json"), encoding="utf-8"))
+    sd = zemi_build.schedule_data(d.get("schedule"))
+    if not sd["sessions"]:
+        return None
+    return {"t": {str(t["page"]): [t["name"], t["field"]] for t in d["teachers"]},
+            "s": [[x["date"], x["start"], x["end"], x["label"], x["place"] or "", x["mode"], x["p"]] for x in sd["sessions"]]}
 
 
 CSS = r"""
@@ -207,6 +222,31 @@ JS = r"""
   renderNotices();
   document.getElementById('dash-nt-count').textContent=NT.length+' 科目';
 
+  /* 2c. 専門演習の個別説明会（終わっていない回。希望リスト＝zemi 頁の zemi_wish_v1 に入れたゼミを先に） */
+  (function(){
+    var Z=D.zemi, box=document.getElementById('dash-zm'); if(!Z||!box) return;
+    var wish=[]; try{wish=JSON.parse(get('zemi_wish_v1')||'[]')}catch(e){wish=[]}
+    function endOf(x){var e=at(x[0]+'T'+(x[2]||x[1]||'23:59'));if(!x[2]&&x[1])e=new Date(e.getTime()+60*6e4);return e}
+    var up=Z.s.filter(function(x){return endOf(x)>now});
+    var W2=up.filter(function(x){return wish.indexOf(x[6])>=0}), seen={}, nextW=[];
+    W2.forEach(function(x){if(!seen[x[6]]){seen[x[6]]=1;nextW.push(x)}});
+    var list=wish.length?nextW:up, td=ymd(today), nToday=up.filter(function(x){return x[0]===td}).length;
+    var zh='';
+    list.slice(0,5).forEach(function(x){
+      var t=Z.t[x[6]]||['',''], wi=wish.indexOf(x[6]), d=day0(x[0]);
+      var tm=x[1]?(x[1]+(x[3]==='昼休み'&&x[5]==='対面'?'頃':'')+(x[2]?'–'+x[2]:'〜')):'';
+      zh+=row(md(d),t[0]+(wi>=0?'（第'+(wi+1)+'希望）':''),'（'+W[wd(d)]+'）'+tm+(x[3]?' '+x[3]:'')+' ∧ '+(x[5]==='対面'?x[4]:'リアルタイム配信'+(x[4]?'（学内視聴 '+x[4]+'）':'')),
+        'zemi/#z'+x[6],x[0]===td?'soon':'');
+    });
+    if(!up.length) zh='<div class="empty">個別説明会の期間は終わった</div>';
+    else if(!list.length) zh='<div class="empty">希望リストのゼミに、これからの回はない</div>';
+    document.getElementById('dash-zemi').innerHTML=zh;
+    document.getElementById('dash-zm-count').textContent=up.length?'今日あと '+nToday+' 回':'';
+    document.getElementById('dash-zm-hint').textContent=wish.length
+      ?'希望リストに入れた '+wish.length+' ゼミの、次の回を時刻順に並べた。'
+      :'これからの回を時刻順に並べた。ゼミ比較の頁で「希望に入れる」を押すと、そのゼミの回だけをここに出す。';
+  })();
+
   /* 3. 今日の復習（講義日から 1・3・7・14・30 日。復習するたびに次の間隔へ） */
   var RK='studyhub_review_v1', st={}; try{st=JSON.parse(get(RK)||'{}')}catch(e){st={}}
   function due(l){
@@ -286,6 +326,9 @@ def dashboard_section(C, headings, manifest):
         + _panel("dash-dl", "DUE", "締切（14日以内）", "dash-dl-count") + '<div id="dash-deadlines"></div></div>'
         + _panel("dash-nt", "NOTICE", "授業からのお知らせ", "dash-nt-count") + '<div id="dash-notices"></div>'
         '<p class="hint">各科目の最新回で述べられた次回・小テスト・課題（小テストのある科目が先）。全文と Claude の TIPS は各回の末尾にある。</p></div>'
+        + ((_panel("dash-zm", "SEMINAR", "ゼミ個別説明会", "dash-zm-count") + '<div id="dash-zemi"></div>'
+            '<p class="hint"><span id="dash-zm-hint"></span> <a href="zemi/#sched">全日程 →</a>　<a href="zemi/">ゼミを比べる →</a></p></div>')
+           if _zemi() else "")
         + _panel("dash-rv", "REVIEW", "今日の復習", "dash-rv-count") + '<div id="dash-review"></div>'
         '<p class="hint">講義の日から1・3・7・14・30日後に、その回をもう一度読む。読んだら「済」を押すと次の間隔へ進む。'
         '記録はこの端末の中だけに残る。</p></div>'

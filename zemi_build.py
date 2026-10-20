@@ -225,7 +225,11 @@ document.getElementById('q').addEventListener('input',function(e){q=e.target.val
 document.getElementById('sort').addEventListener('change',function(e){sort=e.target.value;renderList()});
 document.getElementById('ow').addEventListener('change',function(e){onlyWish=e.target.checked;renderSched()});
 document.getElementById('sp').addEventListener('change',function(e){showPast=e.target.checked;renderSched()});
+/* ハブのダッシュボードから #sched（日程）・#z頁（そのゼミ）で直接開く */
+var hm=location.hash.match(/^#(sched|z(\d+))$/);
+if(hm){if(hm[2]){open[+hm[2]]=true}else{tab='sched'}}
 render();
+if(hm&&hm[2]){try{history.scrollRestoration='manual'}catch(e){}window.addEventListener('load',function(){setTimeout(function(){var ze=document.getElementById('z'+hm[2]);if(ze)ze.scrollIntoView({block:'start'})},0)})}
 })();
 """
 
@@ -352,7 +356,7 @@ def build():
         '<div class="grid" id="grid"></div></div>'
         '<div id="v-cmp" class="cmp"><div id="cmpview"></div></div>'
         '<div id="v-wish" class="wish"><div id="wishview"></div></div>'
-        '<div id="v-sched" class="sched">'
+        '<div id="v-sched" class="sched"><span id="sched"></span>'
         '<div class="notes">' + "<br>".join(esc(x) for x in data.get("schedNotes", []) if x.startswith("・")) + '</div>'
         '<p class="hint">時限は大学の標準時程で時刻に直した（1限9:00・2限10:40・3限13:00・4限14:40・5限16:20、各90分。昼休みは一覧表の注記どおり12:20頃から）。分野の絞り込みは「一覧」の選択と共通。</p>'
         '<div class="dayctl"><label><input type="checkbox" id="ow"> 希望リストのゼミだけ</label><label><input type="checkbox" id="sp"> 終わった日も表示</label></div>'
