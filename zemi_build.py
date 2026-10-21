@@ -180,7 +180,7 @@ function infoHTML(t){
 }
 function briefHTML(t){
   var b=(D.info.briefing||{})[t.page]; if(!b) return '';
-  return '<div class="sec info"><h4>説明会で聞いた内容（'+esc(b.date)+'）</h4>'+b.groups.map(function(g){return '<h5>'+esc(g.h)+'</h5><ul>'+g.items.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul>'}).join('')
+  return '<div class="sec info"><h4>'+esc(b.title||'説明会で聞いた内容')+'（'+esc(b.date)+'）</h4>'+b.groups.map(function(g){return '<h5>'+esc(g.h)+'</h5><ul>'+g.items.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul>'}).join('')
     +'<p class="hint">'+esc(b.where)+'から。'+esc(b.note||'')+'</p></div>';
 }
 function card(t){
