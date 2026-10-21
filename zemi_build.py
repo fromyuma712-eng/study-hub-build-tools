@@ -64,7 +64,20 @@ ZCSS = r"""
 .full{border-top:1px dashed var(--line);margin-top:6px;padding-top:6px}
 .sec{margin:8px 0}
 .sec h4{font-size:12px;font-weight:500;color:var(--faint);letter-spacing:.06em;margin:0 0 3px}
-.sec p{margin:0;font-size:14.5px;line-height:1.85;white-space:pre-wrap}
+.sec .tx{font-size:14.5px;line-height:1.9;max-width:48em}
+.sec .tx p{margin:0 0 .6em}
+.sec .tx p.ld{font-weight:500;margin-top:.9em}
+.sec .tx p.nt{font-size:13px;color:var(--faint)}
+.sec .tx h5{font-size:13.5px;font-weight:500;margin:1em 0 .35em;padding-left:8px;border-left:2px solid var(--ember)}
+.sec .tx ul{margin:.2em 0 .8em;padding-left:1.3em}
+.sec .tx li{margin:.3em 0}
+.sec .tx ul.nu{list-style:none;padding-left:0}
+.sec .tx ul.nu li{padding-left:1.7em;text-indent:-1.7em}
+.sec .tx .d{margin-top:.15em;color:var(--muted)}
+.card.open{grid-column:1/-1}
+.card.open .full .sec h4{font-size:13px;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:4px;margin:18px 0 8px}
+.cmp td .tx{font-size:13.5px;line-height:1.8}
+.cmp td .tx ul{padding-left:1.1em}
 mark{background:rgba(228,87,46,.28);color:inherit}
 .cmpbar{position:sticky;bottom:0;background:var(--ground);border-top:1px solid var(--line-strong);padding:8px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;z-index:5}
 .cmp{overflow-x:auto}
@@ -142,7 +155,37 @@ function visible(){
     return a.page-b.page});
   return L;
 }
-function secHTML(t){return t.sections.map(function(s){return '<div class="sec"><h4>'+esc((s.no?s.no+'．':'')+s.title)+'</h4><p>'+hl(s.text)+'</p></div>'}).join('')+(t.note?'<p class="hint">'+esc(t.note)+'</p>':'')}
+var MK=/^[•・●○◎■□◆◇▶▷➢➤]\s*/, NUM=/^(?:[①-⑩]|[(（]?\d+[.)）．]\s*\S)/, HEAD=/^(?:【[^】]{1,26}】|＜[^＞]{1,26}＞)\s*$/;
+function chunks(x){
+  if(x.length<=130) return [x];
+  var ss=x.match(/[^。．！？]+[。．！？]?/g)||[x], out=[], cur='';
+  ss.forEach(function(z){ if(cur&&(cur+z).length>120){out.push(cur);cur=z}else cur+=z });
+  if(cur) out.push(cur); return out;
+}
+function brNum(x){ var h=hl(x); return (x.match(/[②-⑩]/g)||[]).length?h.replace(/(?=[②-⑩])/g,'<br>'):h }
+function fmt(text){
+  var out=[], ul=null, li=null, lone=false;
+  function closeLi(){ if(li){ul.push('<li>'+li+'</li>');li=null} }
+  function closeUl(kind){ closeLi(); if(ul){out.push('<ul class="'+ul.kind+'">'+ul.join('')+'</ul>');ul=null} }
+  function openUl(kind){ if(ul&&ul.kind!==kind) closeUl(); if(!ul){ul=[];ul.kind=kind} }
+  text.split('\n').forEach(function(raw){
+    var ln=raw.replace(/\s+$/,''), t=ln.replace(/^\s+/,'');
+    if(!t){ closeUl(); lone=false; return }
+    if(/^[l•]$/.test(t)){ closeUl(); lone=true; return }
+    if(lone){ openUl('bu'); closeLi(); li='<b>'+hl(t)+'</b>'; lone=false; return }
+    if(HEAD.test(t)){ closeUl(); out.push('<h5>'+hl(t)+'</h5>'); return }
+    if(MK.test(t)){ openUl('bu'); closeLi(); li=brNum(t.replace(MK,'')); return }
+    if(NUM.test(t)){ openUl('nu'); closeLi(); li=brNum(t); return }
+    if(/^※/.test(t)){ closeUl(); out.push('<p class="nt">'+hl(t)+'</p>'); return }
+    if(ul&&li!==null&&ul.kind==='bu'){ li+='<div class="d">'+hl(t)+'</div>'; return }
+    closeUl();
+    var lead=t.match(/^([^｜]{1,12})｜(.*)$/);
+    if(lead){ var cs=chunks(lead[2]); out.push('<p><b>'+hl(lead[1])+'</b>｜'+hl(cs[0]||'')+'</p>'); cs.slice(1).forEach(function(c){out.push('<p>'+hl(c)+'</p>')}); return }
+    chunks(t).forEach(function(c){ out.push('<p'+(/[：:]$/.test(c)&&c.length<40?' class="ld"':'')+'>'+hl(c)+'</p>') });
+  });
+  closeUl(); return out.join('');
+}
+function secHTML(t){return t.sections.map(function(s){return '<div class="sec"><h4>'+esc((s.no?s.no+'．':'')+s.title)+'</h4><div class="tx">'+fmt(s.text)+'</div></div>'}).join('')+(t.note?'<p class="hint">'+esc(t.note)+'</p>':'')}
 var TODAY=(function(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)})();
 function md(ds){var a=ds.split('-');return (+a[1])+'/'+(+a[2])}
 function tm(x){return x.start?(x.start+(x.label==='昼休み'&&x.mode==='対面'?'頃':'')+(x.end?'–'+x.end:'〜')):''}
@@ -185,7 +228,7 @@ function briefHTML(t){
 }
 function card(t){
   var w=wish.indexOf(t.page), c=cmp.indexOf(t.page)>=0;
-  return '<article class="card" id="z'+t.page+'"><div class="top"><span class="nm">'+hl(t.name)+'</span>'+(t.reading?'<span class="rd">'+esc(t.reading)+'</span>':'')
+  return '<article class="card'+(open[t.page]?' open':'')+'" id="z'+t.page+'"><div class="top"><span class="nm">'+hl(t.name)+'</span>'+(t.reading?'<span class="rd">'+esc(t.reading)+'</span>':'')
    +'<span class="fld '+FK[t.field]+'">'+esc(t.field)+'</span><span class="rd">p.'+t.page+'</span></div>'
    +'<div class="th">'+hl(t.theme)+'</div>'
    +'<div class="tg">'+t._tags.map(function(x){return '<span>'+esc(x)+'</span>'}).join('')+'</div>'
@@ -207,7 +250,7 @@ function renderCmp(){
   var titles=[];P.forEach(function(t){t.sections.forEach(function(s){if(titles.indexOf(s.title)<0)titles.push(s.title)})});
   var h='<table><tr><th>担任者</th>'+P.map(function(t){return '<td class="h">'+esc(t.name)+'<br><span class="fld '+FK[t.field]+'">'+esc(t.field)+'</span> <button class="btn" data-a="cmp" data-p="'+t.page+'">外す</button></td>'}).join('')+'</tr>';
   h+='<tr><th>自動検出タグ</th>'+P.map(function(t){return '<td>'+esc(t._tags.join('、')||'—')+'</td>'}).join('')+'</tr>';
-  titles.forEach(function(ti){h+='<tr><th>'+esc(ti)+'</th>'+P.map(function(t){var s=t.sections.filter(function(x){return x.title===ti})[0];return '<td>'+(s?hl(s.text):'—')+'</td>'}).join('')+'</tr>'});
+  titles.forEach(function(ti){h+='<tr><th>'+esc(ti)+'</th>'+P.map(function(t){var s=t.sections.filter(function(x){return x.title===ti})[0];return '<td><div class="tx">'+(s?fmt(s.text):'—')+'</div></td>'}).join('')+'</tr>'});
   el.innerHTML=h+'</table>';
 }
 function renderWish(){

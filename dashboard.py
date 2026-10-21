@@ -45,8 +45,15 @@ def _urls(manifest):
     return out
 
 
+def _quiz_urls(manifest):
+    """科目名 → 小テスト対策の頁の URL（あれば）。"""
+    return {it["course"]: it["dest"].replace("/index.html", "/") for it in manifest
+            if it.get("title") == "小テスト対策" and it.get("dest") and not it.get("offline")}
+
+
 def data(C, headings, manifest):
     urls, anc = _urls(manifest), _anchors(headings)
+    qurls = _quiz_urls(manifest)
 
     def link(course, rnd=None):
         u = urls.get(course)
@@ -61,7 +68,8 @@ def data(C, headings, manifest):
         "timetable": [dict(t, url=link(t["course"])) for t in getattr(C, "TIMETABLE", [])],
         "ondemand": [dict(t, url=link(t["course"])) for t in getattr(C, "ON_DEMAND", [])],
         "cancelled": [list(x) for x in getattr(C, "CANCELLED", [])],
-        "deadlines": [dict(d, url=link(d["course"]) if d.get("course") else None)
+        "deadlines": [dict(d, url=(qurls.get(d["course"]) if d.get("course") and d["label"].startswith("小テスト") and d["course"] in qurls
+                                   else link(d["course"]) if d.get("course") else None))
                       for d in getattr(C, "DEADLINES", [])],
         "lectures": [{"course": c, "round": r, "date": d, "url": link(c, r)}
                      for c, r, d in getattr(C, "LECTURES", [])],
