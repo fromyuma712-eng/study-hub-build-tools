@@ -83,6 +83,7 @@ mark{background:rgba(228,87,46,.28);color:inherit}
 .kw{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 2px}
 .kwb{font:inherit;font-size:12px;line-height:1.4;padding:2px 8px;min-height:26px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer}
 .kwb:hover{border-color:var(--line-strong);color:var(--ink)}
+.info h5{font-size:12.5px;font-weight:500;color:var(--faint);margin:10px 0 2px;letter-spacing:.04em}
 .info dl{display:grid;grid-template-columns:6.5em 1fr;gap:4px 10px;margin:4px 0;font-size:13.5px;line-height:1.7}
 .info dt{color:var(--faint)}.info dd{margin:0}.info ul{margin:0;padding-left:1.1em}
 .info a.src{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:4px;white-space:nowrap}
@@ -177,6 +178,11 @@ function infoHTML(t){
   if(!r.length) return '<div class="sec info"><h4>資料と公開情報</h4><p class="hint">大学の教員紹介・researchmap・KAKEN では、この担任者の情報を確かめられなかった（'+esc(p.accessed||'')+' 時点）。</p></div>';
   return '<div class="sec info"><h4>資料と公開情報</h4><dl>'+r.join('')+'</dl><p class="hint">大学・researchmap・研究室など公式の公開情報から、'+esc(p.accessed||'')+' に取得した職業上の情報のみ。右の灰色の語は出典。最新の情報は出典で確かめること。</p></div>';
 }
+function briefHTML(t){
+  var b=(D.info.briefing||{})[t.page]; if(!b) return '';
+  return '<div class="sec info"><h4>説明会で聞いた内容（'+esc(b.date)+'）</h4>'+b.groups.map(function(g){return '<h5>'+esc(g.h)+'</h5><ul>'+g.items.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul>'}).join('')
+    +'<p class="hint">'+esc(b.where)+'から。'+esc(b.note||'')+'</p></div>';
+}
 function card(t){
   var w=wish.indexOf(t.page), c=cmp.indexOf(t.page)>=0;
   return '<article class="card" id="z'+t.page+'"><div class="top"><span class="nm">'+hl(t.name)+'</span>'+(t.reading?'<span class="rd">'+esc(t.reading)+'</span>':'')
@@ -187,7 +193,7 @@ function card(t){
    +'<div class="act"><button class="btn" data-a="open" data-p="'+t.page+'">'+(open[t.page]?'閉じる':'全文')+'</button>'
    +'<button class="btn'+(c?' on':'')+'" data-a="cmp" data-p="'+t.page+'">'+(c?'比較から外す':'比べる')+'</button>'
    +'<button class="btn'+(w>=0?' on':'')+'" data-a="wish" data-p="'+t.page+'">'+(w>=0?'第'+(w+1)+'希望 ✓':'希望に入れる')+'</button></div>'
-   +sesHTML(t)+(open[t.page]?'<div class="full">'+secHTML(t)+infoHTML(t)+'</div>':'')+'</article>';
+   +sesHTML(t)+(open[t.page]?'<div class="full">'+secHTML(t)+briefHTML(t)+infoHTML(t)+'</div>':'')+'</article>';
 }
 function byPage(p){return T.filter(function(t){return t.page===p})[0]}
 function renderList(){
