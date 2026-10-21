@@ -53,6 +53,8 @@ pre{font-family:var(--mono);font-size:12.5px;line-height:1.6;background:var(--gl
 .ch label.wrong{border-color:var(--ember)}
 .ch input{margin-top:6px}
 .ch .no{font-family:var(--mono);font-size:12px;color:var(--faint);min-width:1.2em}
+.txa textarea{font:inherit;width:100%;box-sizing:border-box;background:none;color:var(--ink);border:1px solid var(--line-strong);padding:6px 8px;line-height:1.7}
+.self{display:flex;gap:8px;align-items:center;margin-top:8px}
 .num input{font:inherit;font-family:var(--mono);background:none;color:var(--ink);border:1px solid var(--line-strong);padding:6px 8px;width:10em}
 .foot{margin-top:auto;display:flex;gap:8px;align-items:center;padding-top:8px}
 .btn.go{border-color:var(--line-strong);color:var(--ink)}
@@ -92,7 +94,7 @@ function prog(){
   document.getElementById('pt').textContent='正解 '+ok+' / '+n+'（'+p+'%）・解いた '+tried+' 問・ブックマーク '+Object.keys(st.bm).length+' 問';
 }
 function ansText(q){
-  if(q.type==='num') return String(q.a);
+  if(q.type==='num'||q.type==='text') return String(q.a);
   if(q.type==='single') return (q.a+1)+'. '+q.choices[q.a];
   return q.a.map(function(i){return (i+1)+'. '+q.choices[i]}).join(' ／ ');
 }
@@ -101,6 +103,7 @@ function card(q){
    +'<div class="qh"><span>'+esc(q.id.toUpperCase())+'</span><span class="k">第'+q.round+'回</span><span class="k">'+esc(q.kind)+'</span><span>'+esc(q.topic)+'</span></div>'
    +'<div class="qt">'+esc(q.q)+'</div>'+(q.code?'<pre>'+esc(q.code)+'</pre>':'');
   if(q.type==='num') h+='<div class="num"><input type="text" inputmode="decimal" aria-label="答え" data-i="'+q.id+'"></div>';
+  else if(q.type==='text') h+='<div class="txa"><textarea rows="3" aria-label="答え" placeholder="自分の言葉で書く"></textarea></div><div class="res">用語を使って簡潔に書く。採点は含めたい語の有無で行い、言い換えは模範解答と見比べて自分で判定する</div>';
   else h+='<div class="ch">'+q.choices.map(function(c,i){return '<label><input type="'+(q.type==='multi'?'checkbox':'radio')+'" name="'+q.id+'" value="'+i+'"><span class="no">'+(i+1)+'</span><span>'+esc(c)+'</span></label>'}).join('')+'</div>'
      +(q.type==='multi'?'<div class="res">当てはまるものをすべて選ぶ</div>':'');
   h+='<div class="foot"><button class="btn go" data-a="grade" data-q="'+q.id+'">採点</button>'
@@ -110,6 +113,21 @@ function card(q){
 }
 function grade(id){
   var q=Q.filter(function(x){return x.id===id})[0], el=document.getElementById(id), ok;
+  if(q.type==='text'){
+    var v=(el.querySelector('textarea').value||'').replace(/\s+/g,'');
+    if(!v){document.getElementById('r-'+id).textContent='書いてから採点する';return}
+    function has(w){ return w.indexOf('re:')===0 ? new RegExp(w.slice(3)).test(v) : v.indexOf(w.replace(/\s+/g,''))>=0 }
+    var hit=0, rows=q.keys.map(function(alts){var f=alts.some(has); if(f)hit++; return (f?'✓ ':'✗ ')+alts[0].replace(/^re:/,'').replace(/\[\^[^\]]*\]\*/g,'…').replace(/[()]/g,'').replace(/\|/g,'／')});
+    var neg=(q.ng||[]).some(has);
+    ok=!neg&&hit>=(q.need||q.keys.length);
+    st.done[id]=ok?1:0; shown[id]=1; save();
+    el.classList.remove('ok','ng'); el.classList.add(ok?'ok':'ng');
+    document.getElementById('r-'+id).textContent=ok?'含めたい語がそろっている':(neg?'否定や逆の内容を含む可能性がある（模範解答と見比べる）':'語が足りない（'+hit+' / '+q.keys.length+'）');
+    var ex=document.getElementById('e-'+id);
+    ex.innerHTML='<div class="ex"><div class="ans">模範解答：'+esc(q.a)+'</div><div class="res">含めたい語：'+esc(rows.join('　'))+'</div>'+esc(q.explain)
+      +'<div class="self"><span class="res">自分の判定：</span><button class="btn" data-a="self" data-q="'+id+'" data-v="1">できた</button><button class="btn" data-a="self" data-q="'+id+'" data-v="0">できなかった</button></div></div>';
+    typeset(ex); prog(); return;
+  }
   if(q.type==='num'){
     var v=parseFloat((el.querySelector('input').value||'').replace(/[^0-9.\-eE]/g,''));
     if(isNaN(v)){document.getElementById('r-'+id).textContent='数値を入れる';return}
@@ -157,6 +175,7 @@ function render(){
 document.addEventListener('click',function(e){
   var b=e.target.closest('[data-a]'); if(!b)return; var a=b.getAttribute('data-a');
   if(a==='grade'){grade(b.getAttribute('data-q'));return}
+  if(a==='self'){var id2=b.getAttribute('data-q');st.done[id2]=+b.getAttribute('data-v');save();var c2=document.getElementById(id2);c2.classList.remove('ok','ng');c2.classList.add(st.done[id2]===1?'ok':'ng');prog();return}
   if(a==='bm'){var id=b.getAttribute('data-q');if(st.bm[id])delete st.bm[id];else st.bm[id]=1;save();b.classList.toggle('on',!!st.bm[id]);b.textContent=st.bm[id]?'★':'☆';prog();return}
   if(a==='view'){view=b.getAttribute('data-v');shown={}}
   else if(a==='fr'){fr=b.getAttribute('data-v')}
