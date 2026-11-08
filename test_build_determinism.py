@@ -61,13 +61,31 @@ def check(label, cond, detail=''):
     print('  %s %-44s %s' % ('OK ' if cond else 'NG!', label, detail))
 
 
+def snapshot(path):
+    """実運用の public の状態（無ければ None）。ファイル名・大きさ・更新時刻を控える。"""
+    if not os.path.isdir(path):
+        return None
+    out = {}
+    for root, _, files in os.walk(path):
+        for fn in files:
+            p = os.path.join(root, fn)
+            st = os.stat(p)
+            out[os.path.relpath(p, path)] = (st.st_size, st.st_mtime_ns)
+    return out
+
+
+REAL_PUBLIC = os.path.join(HUB, 'public')
+before = snapshot(REAL_PUBLIC)
 with tempfile.TemporaryDirectory() as d:
     a = build(T1, os.path.join(d, 'a'))
     b = build(T1, os.path.join(d, 'b'))
     c = build(T2, os.path.join(d, 'c'))
 
-check('実運用の public を再生成していない',
-      os.path.isdir(os.path.join(HUB, 'public')), '（一時領域へ出力した）')
+# 出力先を一時領域へ逃がしたので、実運用の public は試験の前後で変わらない
+# （無かったなら、無いまま）。以前は「public が存在するか」を見ており、
+# 存在しない環境では無関係に落ちた。
+check('実運用の public を再生成していない', snapshot(REAL_PUBLIC) == before,
+      '（一時領域へ出力した）')
 
 # --- 同じ時刻 → 完全一致（ファイル集合とハッシュの両方）---
 check('同じ時刻: ファイル集合が同一', set(a) == set(b),

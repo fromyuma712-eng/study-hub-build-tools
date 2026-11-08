@@ -19,6 +19,15 @@ import tempfile
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 HUB = os.path.dirname(os.path.abspath(__file__))
+
+# この試験は、非公開の台帳(exceptions.json)と実在の講義まとめを検体の土台にする。
+# 公開リポジトリだけを取得した環境では前提が揃わないため、検査したふりをせず、
+# 「未実施」と明示して終える（合格とは数えない）。
+if not os.path.exists(os.path.join(HUB, 'exceptions.json')):
+    print('SKIP（未実施）: 非公開の exceptions.json と講義まとめが無いため、本試験は実行できない。'
+          '合否は判定していない。')
+    sys.exit(0)
+
 _s = importlib.util.spec_from_file_location('cn', os.path.join(HUB, 'check_notes.py'))
 cn = importlib.util.module_from_spec(_s)
 _s.loader.exec_module(cn)
